@@ -84,19 +84,19 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 │   └── README.md         # Documentación de pruebas
 │
 ├── main.py               # Punto de entrada de la aplicación
-├── requirements.txt      # Dependencias del proyecto
-├── requirements-dev.txt  # Dependencias de desarrollo y pruebas
-├── run_tests.sh          # Script para ejecutar pruebas
-├── setup_tests.sh        # Script para configurar entorno de pruebas
+├── pyproject.toml        # Configuración del proyecto Python
 ├── pytest.ini            # Configuración de pytest
+├── .env                  # Variables de entorno (local)
+├── .env.example          # Ejemplo de variables de entorno
+├── credentials.json      # Credenciales de Google API
 └── README.md             # Documentación principal
 ```
 
 ### Patrones de diseño implementados
-- **Patrón Cliente**: Encapsulación del acceso a Google Sheets en una clase cliente
-- **Patrón Factory**: Creación de manejadores para el bot de Telegram
-- **Propiedades (@property)**: Para el acceso controlado a la configuración
-- **Inyección de dependencias**: Las clases reciben sus dependencias en el constructor
+- **Patrón Cliente**: Encapsulación del acceso a Google Sheets en una clase cliente (`GoogleSheetsClient`)
+- **Patrón Factory**: Creación de manejadores para el bot de Telegram (en `commands.py`)
+- **Propiedades (@property)**: Para el acceso controlado a la configuración (en `config.py`)
+- **Inyección de dependencias**: Las clases reciben sus dependencias en el constructor (por ejemplo, `TelegramBot` recibe `SheetsOperations`)
 
 ## 4. Estado actual del desarrollo
 
@@ -111,24 +111,21 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
   - Pruebas para la integración con Google Sheets
   - Mocks para APIs externas (Telegram, Google Sheets)
   - Fixtures compartidos para facilitar las pruebas
-  - Scripts para ejecución de pruebas
-  - Documentación detallada de pruebas
   - Alta cobertura de código (>95%)
 
 ### Progreso y logros hasta la fecha
-- Esqueleto completo del proyecto con estructura modular
+- Implementación completa del esqueleto del proyecto con estructura modular
 - Implementación básica de la autenticación con Google Sheets
-- Configuración base para el bot de Telegram
+- Configuración funcional del bot de Telegram
 - Gestión de configuración mediante variables de entorno
-- Implementación de un sistema de pruebas robusto y completo
-- Mocking correcto de APIs externas para evitar errores en pruebas
-- Documentación completa del sistema de pruebas
+- Implementación del mecanismo de logging con rotación de archivos
+- Estructura para modelos de datos y servicios creada pero sin implementación
+- Pruebas unitarias completas para los componentes existentes
 
 ### Documentación técnica existente
-- Docstrings en clases y métodos principales
+- Docstrings detallados en clases y métodos principales
 - README.md con instrucciones de instalación y uso
-- Documentación detallada de pruebas en tests/README.md
-- Scripts documentados para ejecución y configuración
+- Documentación de pruebas en tests/README.md
 - Estructura del proyecto bien organizada y documentada
 
 ## 5. Desafíos y consideraciones técnicas
@@ -138,16 +135,19 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - No hay mecanismos de manejo avanzado de errores implementados
 - Falta la implementación de la lógica de negocio para finanzas
 - No existen comandos específicos para registro de transacciones financieras
+- No hay integración entre el bot y los datos financieros en hojas de cálculo
 
 ### Deuda técnica acumulada
-- Información incompleta: Al estar en fase inicial, no se ha acumulado deuda técnica significativa.
-- Las pruebas están implementadas con un enfoque "test-first", por lo que presentan una buena base para el desarrollo futuro.
+- La estructura para modelos y servicios está creada pero sin implementación
+- No hay validación de datos para las entradas financieras
+- El proyecto no tiene una estructura definida de hojas en Google Sheets
 
 ### Optimizaciones pendientes
 - Implementar caching para reducir llamadas a la API de Google
 - Mejorar el manejo de errores para situaciones específicas
 - Implementar validación de datos avanzada para las entradas financieras
 - Integrar herramientas automáticas de análisis de código (linters, formatters)
+- Implementar estructuración y validación automática de hojas de cálculo
 
 ## 6. Hoja de ruta
 
@@ -161,7 +161,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 ### Características planificadas a medio/largo plazo
 1. Implementar reportes y análisis financieros
 2. Agregar funcionalidades de presupuestos y alertas
-3. Integrar gráficos y visualizaciones avanzadas
+3. Integrar gráficos y visualizaciones a través de Telegram
 4. Permitir exportación de datos en diferentes formatos
 5. Implementar análisis inteligente de patrones de gasto
 
@@ -173,9 +173,10 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 ### Elecciones arquitectónicas importantes y sus justificaciones
 1. **Uso de python-telegram-bot**: Proporciona una API moderna y asíncrona para interactuar con la API de Telegram.
 2. **Uso de gspread**: Ofrece una interfaz más sencilla y directa que la API oficial de Google Sheets.
-3. **Estructura modular**: Facilita la extensión y mantenimiento del código.
+3. **Estructura modular**: Facilita la extensión y mantenimiento del código, con clara separación de responsabilidades.
 4. **Loguru para logging**: Proporciona una interfaz más amigable y potente que el módulo logging estándar.
 5. **Pytest y pytest-mock para pruebas**: Framework moderno con mejor soporte para fixtures y mocking que unittest.
+6. **Separación en models, services, bot, sheets**: Facilita la evolución independiente de cada componente.
 
 ### Compensaciones (trade-offs) técnicos realizados
 1. **Simplicidad vs. Funcionalidad completa**: Se priorizó crear una estructura clara y simple sobre implementar todas las funcionalidades posibles.
@@ -198,9 +199,9 @@ Información no disponible: No se han proporcionado enlaces a repositorios exter
 Información no disponible: No se han especificado contactos para este proyecto.
 
 ### Información sobre entornos de prueba/producción
-El proyecto está configurado para ejecutarse en un entorno local de desarrollo. No hay configuración específica para entornos de prueba o producción en esta etapa. Las pruebas se ejecutan utilizando pytest y pueden ser iniciadas con los scripts proporcionados:
-- `./setup_tests.sh`: Configura el entorno para pruebas
-- `./run_tests.sh`: Ejecuta las pruebas con diferentes opciones
+El proyecto está configurado para ejecutarse en un entorno local de desarrollo. No hay configuración específica para entornos de prueba o producción en esta etapa. Las pruebas se ejecutan utilizando pytest y pueden ser iniciadas con:
+- `pytest`: Ejecuta las pruebas
+- `pytest --cov=src`: Ejecuta las pruebas con informe de cobertura
 
 ## Instrucciones para continuar el desarrollo
 
@@ -210,11 +211,10 @@ El proyecto está configurado para ejecutarse en un entorno local de desarrollo.
 4. Instalar dependencias: `uv pip install -r requirements.txt`
 5. Para desarrollo, instalar dependencias adicionales: `uv pip install -r requirements-dev.txt`
 6. Configurar variables de entorno copiando `.env.example` a `.env` y completando los valores
-7. Ejecutar pruebas: `./run_tests.sh` o `pytest`
+7. Ejecutar pruebas: `pytest` o `pytest --cov=src`
 8. Ejecutar la aplicación: `python main.py`
 
 Las áreas prioritarias para continuar el desarrollo son:
-1. Implementar la lógica de negocio en el bot para capturar datos financieros
-2. Desarrollar las operaciones CRUD en el módulo de Google Sheets
-3. Expandir las pruebas unitarias para nuevos componentes implementados
-4. Crear nuevos comandos específicos para funcionalidades financieras
+1. Ampliar los comandos del bot para gestionar transacciones
+2. Implementar operaciones CRUD en `src/sheets/operations.py`
+3. Estructurar las hojas de cálculo para almacenar diferentes tipos de datos financieros
