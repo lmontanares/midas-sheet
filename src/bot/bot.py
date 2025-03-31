@@ -7,7 +7,7 @@ from telegram.ext import Application, ApplicationBuilder, CommandHandler
 
 from ..sheets.operations import SheetsOperations
 from .commands import get_commands
-from .handlers import error_handler, help_command, start_command
+from .handlers import add_command, error_handler, help_command, start_command
 
 
 class TelegramBot:
@@ -38,6 +38,10 @@ class TelegramBot:
         # Registrar manejadores de comandos
         self.application.add_handler(CommandHandler("start", start_command))
         self.application.add_handler(CommandHandler("help", help_command))
+        self.application.add_handler(CommandHandler("agregar", add_command))
+
+        # Guardar referencia a SheetsOperations para usar en los manejadores
+        self.application.bot_data["sheets_operations"] = self.sheets
 
         # Registrar manejador de errores
         self.application.add_error_handler(error_handler)

@@ -124,3 +124,76 @@ def test_get_worksheet_not_found(mocker):
     # Act & Assert
     with pytest.raises(ValueError, match="La hoja 'Sheet1' no existe"):
         operations.get_worksheet("Sheet1")
+
+
+def test_append_row(mocker):
+    """Prueba la adición de una fila a una hoja de trabajo."""
+    # Arrange
+    mock_client = mocker.Mock()
+    mock_spreadsheet = mocker.Mock()
+    mock_worksheet = mocker.Mock()
+    
+    mock_client.open_spreadsheet.return_value = mock_spreadsheet
+    mock_spreadsheet.worksheet.return_value = mock_worksheet
+    mock_worksheet.append_row.return_value = None
+    
+    operations = SheetsOperations(mock_client, "fake_spreadsheet_id")
+    operations.setup()
+    
+    # Act
+    values = ["2023-10-15", "usuario", "comida", 50.5, "2023-10-15 12:34:56"]
+    result = operations.append_row("gastos", values)
+    
+    # Assert
+    assert result is True
+    mock_spreadsheet.worksheet.assert_called_once_with("gastos")
+    mock_worksheet.append_row.assert_called_once_with(values)
+
+
+def test_append_row_error(mocker):
+    """Prueba el manejo de errores al añadir una fila."""
+    # Arrange
+    mock_client = mocker.Mock()
+    mock_spreadsheet = mocker.Mock()
+    mock_worksheet = mocker.Mock()
+    
+    mock_client.open_spreadsheet.return_value = mock_spreadsheet
+    mock_spreadsheet.worksheet.return_value = mock_worksheet
+    mock_worksheet.append_row.side_effect = Exception("Error al añadir fila")
+    
+    operations = SheetsOperations(mock_client, "fake_spreadsheet_id")
+    operations.setup()
+    
+    # Act & Assert
+    with pytest.raises(Exception, match="Error al añadir fila"):
+        operations.append_row("gastos", ["2023-10-15", "usuario", "comida", 50.5, "2023-10-15 12:34:56"])
+
+
+def test_ensure_sheets_exist(mocker):
+    """Prueba la creación de hojas necesarias si no existen."""
+    # Arrange
+    mock_client = mocker.Mock()
+    mock_spreadsheet = mocker.Mock()
+    mock_worksheet = mocker.Mock()
+    
+    mock_client.open_spreadsheet.return_value = mock_spreadsheet
+    # Simular que las hojas no existen inicialmente
+    mock_spreadsheet.worksheets.return_value = []
+    mock_spreadsheet.add_worksheet.return_value = mock_worksheet
+    
+    operations = SheetsOperations(mock_client, "fake_spreadsheet_id")
+    
+    # Act
+    operations.spreadsheet = mock_spreadsheet
+    operations.ensure_sheets_exist()
+    
+    # Assert
+    # Verificar que se crean las dos hojas necesarias
+    assert mock_spreadsheet.add_worksheet.call_count == 2
+    expected_calls = [
+        mocker.call(title="gastos", rows=1, cols=5),
+        mocker.call(title="ingresos", rows=1, cols=5)
+    ]
+    assert mock_spreadsheet.add_worksheet.call_args_list == expected_calls
+    # Verificar que se añaden los encabezados
+    assert mock_worksheet.append_row.call_count == 2

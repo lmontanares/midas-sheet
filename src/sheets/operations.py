@@ -29,7 +29,7 @@ class SheetsOperations:
 
     def setup(self) -> None:
         """
-        Configura el acceso a la hoja de cálculo.
+        Configura el acceso a la hoja de cálculo y asegura la existencia de hojas necesarias.
 
         Raises:
             Exception: Si falla la operación
@@ -37,9 +37,43 @@ class SheetsOperations:
         try:
             self.spreadsheet = self.client.open_spreadsheet(self.spreadsheet_id)
             logger.info(f"Hoja de cálculo configurada: {self.spreadsheet.title}")
+            
+            # Inicializar las hojas necesarias
+            self.ensure_sheets_exist()
         except Exception as e:
             logger.error(f"Error al configurar la hoja de cálculo: {e}")
             raise
+            
+    def ensure_sheets_exist(self) -> None:
+        """
+        Asegura que existan las hojas necesarias para la aplicación.
+        Si no existen, las crea con los encabezados apropiados.
+        """
+        required_sheets = {
+            "gastos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp"],
+            "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp"]
+        }
+        
+        existing_sheets = [ws.title for ws in self.spreadsheet.worksheets()]
+        
+        for sheet_name, headers in required_sheets.items():
+            if sheet_name not in existing_sheets:
+                # Crear la hoja con los encabezados
+                worksheet = self.spreadsheet.add_worksheet(title=sheet_name, rows=1, cols=len(headers))
+                worksheet.append_row(headers)
+                logger.info(f"Hoja '{sheet_name}' creada con éxito")
+            else:
+                # Verificar que los encabezados sean correctos
+                worksheet = self.spreadsheet.worksheet(sheet_name)
+                actual_headers = worksheet.row_values(1)
+                
+                if not actual_headers:
+                    # La hoja existe pero está vacía
+                    worksheet.append_row(headers)
+                    logger.info(f"Encabezados añadidos a la hoja '{sheet_name}'")
+                elif actual_headers != headers:
+                    logger.warning(f"Los encabezados de la hoja '{sheet_name}' no coinciden con los esperados")
+                    # No modificamos encabezados existentes para evitar romper datos
 
     def get_worksheet(self, sheet_name: str) -> Any:
         """
@@ -64,3 +98,27 @@ class SheetsOperations:
         except Exception as e:
             logger.error(f"Error al obtener la hoja '{sheet_name}': {e}")
             raise ValueError(f"La hoja '{sheet_name}' no existe")
+            
+    def append_row(self, sheet_name: str, values: list[Any]) -> bool:
+        """
+        Añade una fila de datos al final de una hoja específica.
+        
+        Args:
+            sheet_name: Nombre de la hoja donde añadir los datos
+            values: Lista de valores a añadir como nueva fila
+            
+        Returns:
+            True si la operación fue exitosa
+            
+        Raises:
+            ValueError: Si no se encuentra la hoja
+            RuntimeError: Si no se ha configurado la hoja de cálculo
+        """
+        try:
+            worksheet = self.get_worksheet(sheet_name)
+            worksheet.append_row(values)
+            logger.info(f"Datos añadidos a la hoja '{sheet_name}': {values}")
+            return True
+        except Exception as e:
+            logger.error(f"Error al añadir datos a la hoja '{sheet_name}': {e}")
+            raise
