@@ -17,7 +17,7 @@ class TelegramBot:
     Maneja la configuración y ejecución del bot.
     """
 
-    def __init__(self, token: str, sheet: SheetsOperations) -> None:
+    def __init__(self, token: str, sheets: SheetsOperations) -> None:
         """
         Inicializa el bot de Telegram.
 
@@ -25,7 +25,7 @@ class TelegramBot:
             token: Token de acceso del bot de Telegram
         """
         self.token = token
-        self.sheet = sheet
+        self.sheets = sheets
         self.application: Application | None = None
 
     def setup(self) -> None:

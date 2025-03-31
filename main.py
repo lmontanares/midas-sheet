@@ -33,11 +33,11 @@ def main() -> None:
         sheets_client.authenticate()
 
         # Inicializar operaciones de hojas de cálculo
-        sheet = SheetsOperations(sheets_client, config.spreadsheet_id)
-        sheet.setup()
+        sheets = SheetsOperations(sheets_client, config.spreadsheet_id)
+        sheets.setup()
 
         # Inicializar y ejecutar el bot de Telegram
-        bot = TelegramBot(config.telegram_token, sheet)
+        bot = TelegramBot(config.telegram_token, sheets)
         bot.setup()
         bot.run()
 
