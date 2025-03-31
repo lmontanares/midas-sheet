@@ -2,8 +2,6 @@
 Manejadores de mensajes y comandos para el bot de Telegram.
 """
 
-from typing import Any
-
 from loguru import logger
 from telegram import Update
 from telegram.ext import ContextTypes
