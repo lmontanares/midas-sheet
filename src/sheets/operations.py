@@ -4,6 +4,7 @@ Operaciones para manipular datos en Google Sheets usando gspread.
 
 from typing import Any
 
+from gspread import Spreadsheet
 from loguru import logger
 
 from .client import GoogleSheetsClient
@@ -24,7 +25,7 @@ class SheetsOperations:
         """
         self.client = client
         self.spreadsheet_id = spreadsheet_id
-        self.spreadsheet = None
+        self.spreadsheet: Spreadsheet
 
     def setup(self) -> None:
         """
