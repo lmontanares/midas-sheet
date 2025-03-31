@@ -4,4 +4,8 @@ version = "0.1.0"
 description = "Bot para agregar gastos financieros a una hoja excel"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "loguru>=0.7.3",
+    "pytest>=8.3.5",
+    "python-telegram-bot>=22.0",
+]
