@@ -1,0 +1,7 @@
+[project]
+name = "finanzas"
+version = "0.1.0"
+description = "Bot para agregar gastos financieros a una hoja excel"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = []
