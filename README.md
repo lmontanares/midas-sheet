@@ -62,6 +62,11 @@ Editar el archivo `.env` con:
 │   └── utils/            # Utilidades comunes
 │
 ├── tests/                # Pruebas automatizadas
+│   ├── test_bot.py       # Pruebas para el bot de Telegram
+│   ├── test_commands.py  # Pruebas para los comandos del bot
+│   ├── test_handlers.py  # Pruebas para los manejadores del bot
+│   ├── test_sheets.py    # Pruebas para la integración con Google Sheets
+│   └── README.md         # Documentación de pruebas
 │
 ├── main.py               # Punto de entrada principal
 ├── requirements.txt      # Dependencias del proyecto
@@ -78,17 +83,41 @@ python main.py
 
 ## Tests
 
-Para ejecutar las pruebas:
+### Ejecutar las pruebas
+
+Para ejecutar todas las pruebas:
 
 ```bash
 pytest
 ```
+
+Para ejecutar pruebas específicas:
+
+```bash
+pytest tests/test_bot.py  # Solo pruebas del bot
+pytest tests/test_sheets.py  # Solo pruebas de Google Sheets
+```
+
+### Cobertura de código
 
 Para verificar la cobertura:
 
 ```bash
 pytest --cov=src tests/
 ```
+
+Para generar un informe detallado de cobertura en HTML:
+
+```bash
+pytest --cov=src --cov-report=html tests/
+```
+
+### Requisitos para pruebas
+
+Las pruebas requieren:
+- pytest
+- pytest-asyncio (para pruebas asíncronas)
+- pytest-cov (para medir cobertura)
 
 ## Licencia
 

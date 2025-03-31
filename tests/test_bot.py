@@ -2,20 +2,27 @@
 Tests para el módulo del bot de Telegram.
 """
 
-from unittest.mock import AsyncMock, patch
-
 import pytest
+from telegram import BotCommand, Update, User
+from telegram.ext import Application, ApplicationBuilder, CommandHandler
 
 from src.bot.bot import TelegramBot
 from src.bot.commands import get_commands
+from src.bot.handlers import error_handler, help_command, start_command
 
 
 def test_get_commands():
-    """Verifica que la lista de comandos no está vacía."""
+    """Verifica que la lista de comandos no está vacía y contiene los comandos básicos."""
     commands = get_commands()
     assert len(commands) > 0
     assert any(cmd.command == "start" for cmd in commands)
     assert any(cmd.command == "help" for cmd in commands)
+    
+    # Verifica que cada comando tenga una descripción no vacía
+    for cmd in commands:
+        assert isinstance(cmd, BotCommand)
+        assert cmd.command, "El comando no debe estar vacío"
+        assert cmd.description, "La descripción del comando no debe estar vacía"
 
 
 @pytest.mark.asyncio
@@ -33,18 +40,159 @@ async def test_bot_initialization():
 
 
 @pytest.mark.asyncio
-@patch("telegram.ext.ApplicationBuilder")
-async def test_bot_setup(mock_builder):
+async def test_bot_setup(mocker):
     """Prueba la configuración del bot."""
     # Arrange
     token = "test_token_123"
-    mock_app = AsyncMock()
-    mock_builder.return_value.token.return_value.build.return_value = mock_app
-
+    
+    # Creamos objetos simulados
+    mock_app = mocker.Mock()
+    mock_app.add_handler = mocker.Mock()
+    mock_app.add_error_handler = mocker.Mock()
+    mock_app.bot = mocker.Mock()
+    mock_app.bot.set_my_commands = mocker.AsyncMock()
+    
+    # Creamos un mock para ApplicationBuilder
+    mock_builder = mocker.Mock()
+    mock_builder.token.return_value = mock_builder
+    mock_builder.build.return_value = mock_app
+    
+    # Usamos mocker para reemplazar ApplicationBuilder
+    mocker.patch("telegram.ext.ApplicationBuilder", return_value=mock_builder)
+    
     # Act
     bot = TelegramBot(token)
     await bot.setup()
-
+    
     # Assert
     assert bot.application is not None
-    mock_builder.return_value.token.assert_called_once_with(token)
+    assert mock_builder.token.call_args[0][0] == token
+    
+    # Verifica que se agregaron los manejadores de comandos
+    assert mock_app.add_handler.call_count >= 2
+    
+    # Verifica que se configuraron los comandos en el menú del bot
+    mock_app.bot.set_my_commands.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_bot_run_without_setup():
+    """Prueba que el bot no se puede ejecutar sin configuración previa."""
+    # Arrange
+    token = "test_token_123"
+    bot = TelegramBot(token)
+    
+    # Act & Assert
+    with pytest.raises(RuntimeError) as excinfo:
+        await bot.run()
+    
+    assert "El bot debe ser configurado antes de ejecutarse" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_bot_run(mocker):
+    """Prueba la ejecución del bot."""
+    # Arrange
+    token = "test_token_123"
+    
+    # Creamos objetos simulados
+    mock_app = mocker.Mock()
+    mock_app.add_handler = mocker.Mock()
+    mock_app.add_error_handler = mocker.Mock()
+    mock_app.bot = mocker.Mock()
+    mock_app.bot.set_my_commands = mocker.AsyncMock()
+    mock_app.run_polling = mocker.AsyncMock()
+    
+    # Creamos un mock para ApplicationBuilder
+    mock_builder = mocker.Mock()
+    mock_builder.token.return_value = mock_builder
+    mock_builder.build.return_value = mock_app
+    
+    # Usamos mocker para reemplazar ApplicationBuilder
+    mocker.patch("telegram.ext.ApplicationBuilder", return_value=mock_builder)
+    
+    # Act
+    bot = TelegramBot(token)
+    await bot.setup()
+    await bot.run()
+    
+    # Assert
+    mock_app.run_polling.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_start_command(mocker):
+    """Prueba el manejador del comando /start."""
+    # Arrange
+    mock_user = mocker.Mock(spec=User)
+    mock_user.first_name = "Usuario"
+    
+    mock_update = mocker.Mock(spec=Update)
+    mock_update.effective_user = mock_user
+    mock_update.message = mocker.Mock()
+    mock_update.message.reply_text = mocker.AsyncMock()
+    
+    mock_context = mocker.Mock()
+    
+    # Act
+    await start_command(mock_update, mock_context)
+    
+    # Assert
+    mock_update.message.reply_text.assert_awaited_once()
+    call_args = mock_update.message.reply_text.call_args[0][0]
+    assert "¡Hola Usuario!" in call_args
+    assert "gestión financiera" in call_args
+
+
+@pytest.mark.asyncio
+async def test_help_command(mocker):
+    """Prueba el manejador del comando /help."""
+    # Arrange
+    mock_update = mocker.Mock(spec=Update)
+    mock_update.message = mocker.Mock()
+    mock_update.message.reply_text = mocker.AsyncMock()
+    
+    mock_context = mocker.Mock()
+    
+    # Act
+    await help_command(mock_update, mock_context)
+    
+    # Assert
+    mock_update.message.reply_text.assert_awaited_once()
+    call_args = mock_update.message.reply_text.call_args[0][0]
+    assert "/start" in call_args
+    assert "/help" in call_args
+    
+    # Verifica que se especificó el modo de análisis Markdown
+    assert mock_update.message.reply_text.call_args[1].get("parse_mode") == "Markdown"
+
+
+@pytest.mark.asyncio
+async def test_error_handler_with_update(mocker):
+    """Prueba el manejador de errores cuando hay un Update."""
+    # Arrange
+    mock_update = mocker.Mock(spec=Update)
+    mock_update.effective_message = mocker.Mock()
+    mock_update.effective_message.reply_text = mocker.AsyncMock()
+    
+    mock_context = mocker.Mock()
+    mock_context.error = Exception("Error de prueba")
+    
+    # Act
+    await error_handler(mock_update, mock_context)
+    
+    # Assert
+    mock_update.effective_message.reply_text.assert_awaited_once()
+    call_args = mock_update.effective_message.reply_text.call_args[0][0]
+    assert "Ha ocurrido un error" in call_args
+
+
+@pytest.mark.asyncio
+async def test_error_handler_without_update(mocker):
+    """Prueba el manejador de errores cuando no hay un Update."""
+    # Arrange
+    mock_context = mocker.Mock()
+    mock_context.error = Exception("Error de prueba")
+    
+    # Act & Assert - no debería lanzar una excepción
+    await error_handler(None, mock_context)
