@@ -1,4 +1,4 @@
-# Documento de Transferencia: Sistema de Gestión Financiera v2.1
+# Documento de Transferencia: Sistema de Gestión Financiera v2.2
 
 ## 1. Visión general del proyecto
 
@@ -16,7 +16,9 @@ El usuario interactúa con el bot siguiendo un flujo específico para registrar 
 3. Selecciona una categoría
 4. Si seleccionó un egreso, selecciona una subcategoría (los ingresos no tienen subcategorías)
 5. Ingresa el monto de la transacción
-6. El sistema registra la transacción en la hoja de cálculo correspondiente
+6. Decide si desea agregar un comentario opcional (con botones Sí/No)
+7. Si eligió añadir comentario, lo escribe; si no, se registra sin comentario
+8. El sistema registra la transacción en la hoja de cálculo correspondiente
 
 ### Problemas que resuelve y valor que aporta
 - Simplifica el registro de gastos e ingresos sin necesidad de aplicaciones complejas
@@ -24,6 +26,8 @@ El usuario interactúa con el bot siguiendo un flujo específico para registrar 
 - Centraliza los datos financieros en Google Sheets, facilitando análisis posteriores
 - Elimina la necesidad de herramientas costosas o complejas de finanzas personales
 - Proporciona una estructura jerárquica para categorizar gastos, facilitando análisis detallados
+- Permite contextualizar transacciones mediante el campo de comentarios opcional
+- Interfaz guiada mediante botones que simplifica la experiencia de usuario
 
 ## 2. Ecosistema tecnológico
 
@@ -113,6 +117,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - **Patrón Cliente**: Encapsulación del acceso a Google Sheets en una clase cliente (`GoogleSheetsClient`)
 - **Patrón Factory**: Creación de manejadores para el bot de Telegram (en `commands.py`)
 - **Patrón Gestor de Configuración**: Implementado con la clase `CategoryManager` que centraliza el acceso a las configuraciones de categorías
+- **Patrón Estado**: Implementado para el flujo de conversación usando el diccionario `user_data` con estados definidos para manejar la transición entre pasos del flujo
 - **Propiedades (@property)**: Para el acceso controlado a la configuración (en `config.py` y `categories.py`)
 - **Inyección de dependencias**: Las clases reciben sus dependencias en el constructor (por ejemplo, `TelegramBot` recibe `SheetsOperations`)
 - **Callback asíncronos**: Uso de `post_init` para registro de comandos del bot de forma asíncrona
@@ -131,13 +136,22 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
   - Selección de categorías mediante botones
   - Selección de subcategorías para gastos
   - Entrada de montos
-  - Registro en hojas de cálculo
+  - Opción para añadir comentarios opcional mediante botones (Sí/No)
+  - Registro en hojas de cálculo con todos los campos
 - Sistema de categorías configurables desde archivo YAML externo:
   - Categorías de gastos con estructura jerárquica (categorías y subcategorías)
   - Categorías de ingresos simples sin subcategorías
 - Capacidad para recargar las categorías en tiempo de ejecución sin reiniciar el bot
 - Integración con Google Sheets para almacenar las transacciones
 - Uso de `pathlib.Path` para manejo moderno de rutas de archivos
+- Sistema de estados para gestionar flujos de conversación con robustez:
+  - Estado `waiting_amount`: Esperando que el usuario ingrese un monto
+  - Estado `confirm_comment`: Esperando confirmación para agregar comentario
+  - Estado `waiting_comment`: Esperando que el usuario ingrese un comentario
+- Sistema avanzado de manejo de errores y recuperación:
+  - Validación de existencia de datos antes de procesarlos
+  - Logging detallado para fácil depuración
+  - Estructura try/except en todos los manejadores críticos
 - **Sistema de pruebas completo**:
   - Pruebas unitarias para los componentes del bot
   - Pruebas para la integración con Google Sheets
@@ -160,7 +174,15 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
   - Selección clara entre ingresos y gastos como primer paso
   - Navegación intuitiva entre las diferentes opciones
   - Posibilidad de volver atrás en cualquier punto del flujo
-- Las hojas "gastos" e "ingresos" incluyen columnas para categoría y subcategoría
+- Implementación del campo de comentarios opcional:
+  - Botones intuitivos con emojis para decidir si agregar comentario
+  - Flujo de selección Sí/No para mejorar la experiencia de usuario
+  - Validación y manejo de errores robusto en cada paso
+- Mejoras significativas en el manejo de errores y robustez:
+  - Verificación de existencia de datos antes de procesarlos
+  - Manejo de excepciones en todos los puntos críticos
+  - Sistema de logging detallado para facilitar la depuración
+- Las hojas "gastos" e "ingresos" incluyen columnas para categoría, subcategoría y comentario
 
 ### Documentación técnica existente
 - Docstrings detallados en clases y métodos principales
@@ -180,6 +202,9 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - El manejo asíncrono entre Python y python-telegram-bot puede ser complejo:
   - Se ha implementado una solución utilizando post_init callbacks para el registro de comandos
   - Pueden surgir advertencias relacionadas con coroutines no esperadas, que no afectan la funcionalidad
+- Potenciales errores en el manejo de comentarios cuando el estado de la conversación se pierde:
+  - Se ha implementado un sistema de verificación de estados y recuperación
+  - Se agregó logging detallado para identificar estos problemas rápidamente
 
 ### Deuda técnica acumulada
 - La estructura para modelos y servicios está creada pero sin implementación completa
@@ -189,6 +214,8 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - Faltan pruebas para algunos escenarios específicos con las nuevas funcionalidades:
   - Pruebas para el gestor de categorías
   - Pruebas para la recarga de categorías en tiempo de ejecución
+  - Pruebas para el flujo completo de comentarios y sus estados
+  - Pruebas de recuperación ante pérdida de estados de conversación
 
 ### Optimizaciones pendientes
 - Implementar caching para reducir llamadas a la API de Google
@@ -196,17 +223,23 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - Implementar validación de datos avanzada para las entradas financieras
 - Integrar herramientas automáticas de análisis de código (linters, formatters)
 - Mejorar el manejo asíncrono de operaciones para evitar advertencias
+- Mejorar la interfaz de usuarios para comentarios:
+  - Botón para cancelar la entrada de comentarios
+  - Botón para editar un comentario antes de finalizar
+  - Limitación automática de longitud de comentarios
 
 ## 6. Hoja de ruta
 
 ### Próximos pasos inmediatos
-1. Implementar comando para consultar transacciones recientes
+1. Implementar comando para consultar transacciones recientes incluyendo comentarios
 2. Implementar comando para visualizar resúmenes (ej: gastos por categoría)
-3. Mejorar la validación de datos de entrada
+3. Mejorar la validación de datos de entrada en todos los campos
 4. Añadir funcionalidad para editar o eliminar transacciones
 5. Implementar pruebas para las nuevas funcionalidades:
    - Pruebas para el gestor de categorías
    - Pruebas para la recarga de categorías
+   - Pruebas exhaustivas para el flujo de comentarios
+6. Mejorar persistencia de estados para evitar pérdidas durante la conversación
 
 ### Características planificadas a medio/largo plazo
 1. Implementar reportes y análisis financieros más avanzados
@@ -215,6 +248,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 4. Permitir exportación de datos en diferentes formatos
 5. Implementar análisis inteligente de patrones de gasto
 6. Soporte para múltiples usuarios y perfiles
+7. Búsquedas por texto en comentarios y filtrado de transacciones
 
 ### Cronograma tentativo
 Información no disponible: No se ha establecido un cronograma formal para el desarrollo.
@@ -232,6 +266,8 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 8. **Nombres en inglés, documentación en español**: Para seguir las mejores prácticas de desarrollo (nombres en inglés) mientras se mantiene la accesibilidad para desarrolladores hispanohablantes.
 9. **Uso de `pathlib.Path`**: Proporciona una forma moderna y orientada a objetos para manipular rutas de archivos.
 10. **Post-init callback para comandos**: Soluciona los problemas con coroutines asíncronas sin complicar excesivamente la arquitectura.
+11. **Sistema de estados para conversación**: Permite un flujo robusto y recuperable, facilitando la gestión de la conversación por etapas.
+12. **Verificación preventiva de datos**: Validación de la existencia de datos antes de procesarlos para evitar errores por pérdida de estado.
 
 ### Compensaciones (trade-offs) técnicos realizados
 1. **Simplicidad vs. Funcionalidad completa**: Se priorizó crear una estructura clara y simple sobre implementar todas las funcionalidades posibles.
@@ -241,6 +277,8 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 5. **Categorías en YAML vs. base de datos**: Se optó por almacenar las categorías en un archivo YAML por su simplicidad y facilidad de edición, sacrificando algunas capacidades de consulta avanzada.
 6. **Flujo guiado vs. entrada libre**: Se implementó un flujo guiado por pasos usando botones, lo que mejora la experiencia de usuario pero requiere más complejidad en el código.
 7. **Manejo de asincronía**: Se eligió un enfoque con post_init callbacks para evitar problemas de bucles de eventos, priorizando la estabilidad sobre la pureza del diseño.
+8. **Botones para comentarios vs. siempre solicitarlo**: Se implementó un sistema de confirmación Sí/No para añadir comentarios, mejorando la experiencia de usuario a costa de un paso adicional.
+9. **Robustez vs. rendimiento**: Se implementaron múltiples verificaciones y logging para garantizar la robustez, aceptando un ligero impacto en el rendimiento.
 
 ### Lecciones aprendidas durante el desarrollo
 - La importancia de implementar un enfoque de testing robusto desde el inicio del proyecto.
@@ -252,6 +290,9 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 - El manejo correcto de la asincronía en Python requiere considerar cuidadosamente los bucles de eventos y coroutines.
 - La externalización de configuraciones a archivos YAML mejora significativamente la mantenibilidad del código.
 - El uso de pathlib simplifica y hace más robusta la manipulación de rutas de archivos.
+- La implementación de un sistema de estados para conversaciones es crucial para la robustez del bot.
+- Verificar siempre la existencia de datos antes de procesarlos evita errores difíciles de diagnosticar.
+- El registro detallado de eventos (logging) es indispensable para identificar problemas en producción.
 
 ## 8. Recursos adicionales
 
@@ -279,31 +320,33 @@ El proyecto está configurado para ejecutarse en un entorno local de desarrollo.
 
 ## Cambios recientes importantes
 
-Las modificaciones más significativas en la última versión (v2.1) incluyen:
+Las modificaciones más significativas en la última versión (v2.2) incluyen:
 
-1. **Externalización de categorías a archivo YAML**:
-   - Se creó el módulo `src/config` para gestionar configuraciones externas
-   - Se implementó la clase `CategoryManager` para cargar y gestionar categorías
-   - Se movieron las categorías hardcodeadas a `categories.yaml`
+1. **Implementación del campo de comentarios**:
+   - Adición de un nuevo campo opcional "Comentario" en la estructura de datos
+   - Actualización de los esquemas de hojas de cálculo para incluir la columna de comentarios
+   - Implementación de un flujo interactivo con botones Sí/No para confirmar si se desea agregar comentario
+   - Creación de estados específicos para manejar el flujo de comentarios
 
-2. **Implementación del comando `/recargar`**:
-   - Permite actualizar las categorías sin reiniciar el bot
-   - Muestra estadísticas sobre las categorías cargadas
+2. **Mejoras en el sistema de estados de conversación**:
+   - Implementación de un sistema de estados para el flujo de conversación (`waiting_amount`, `confirm_comment`, `waiting_comment`)
+   - Transiciones claras entre estados para manejar el flujo de manera robusta
+   - Validación de estados antes de procesar los datos para evitar errores
 
-3. **Mejoras en el flujo de `/agregar`**:
-   - Ahora comienza con la selección clara entre GASTOS e INGRESOS
-   - Navegación mejorada con botones para volver atrás
-   - Mejor separación de responsabilidades en el código
+3. **Mejoras en el manejo de errores**:
+   - Verificación preventiva de la existencia de datos antes de procesarlos
+   - Estructura try/except en todos los manejadores críticos
+   - Mensajes de error claros para el usuario final
+   - Logging detallado para facilitar la depuración
 
-4. **Mejoras en manejo asíncrono**:
-   - Implementación de `post_init` callback para registro de comandos
-   - Solución a advertencias sobre coroutines no esperadas
+4. **Optimización de la experiencia de usuario**:
+   - Botones con emojis para mejorar la interpretación visual (✅ Sí, ❌ No)
+   - Mensajes claros que muestran el estado actual de la transacción
+   - Formato mejorado para mensajes de confirmación incluyendo comentarios
 
-5. **Uso de `pathlib.Path`**:
-   - Reemplazo de funciones tradicionales de os.path por Path
-   - Manejo más moderno, seguro y legible de rutas de archivos
+5. **Mejoras en logging y depuración**:
+   - Logging detallado en cada etapa del proceso
+   - Identificadores de usuario en los logs para rastrear acciones específicas
+   - Registro de eventos de errores con contexto completo
 
-6. **Correcciones de bugs**:
-   - Solución a problemas con bucles de eventos asíncronos
-   - Manejo correcto de coroutines en el ciclo de vida del bot
-   - Mejor gestión de errores en general
+Estas modificaciones mejoran significativamente la funcionalidad, usabilidad y robustez del sistema, proporcionando una mejor experiencia al usuario y facilitando el mantenimiento y depuración del código.
