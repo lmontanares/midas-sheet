@@ -50,8 +50,8 @@ class SheetsOperations:
         Si no existen, las crea con los encabezados apropiados.
         """
         required_sheets = {
-            "gastos": ["Fecha", "Usuario", "Categoría", "Subcategoría", "Monto", "Timestamp"],
-            "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp"],
+            "gastos": ["Fecha", "Usuario", "Categoría", "Subcategoría", "Monto", "Timestamp", "Comentario"],
+            "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp", "Comentario"],
         }
 
         existing_sheets = [ws.title for ws in self.spreadsheet.worksheets()]

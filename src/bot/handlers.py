@@ -6,8 +6,8 @@ import datetime
 
 from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
+from telegram.ext import ContextTypes
 
 from src.config.categories import category_manager
 from src.sheets.operations import SheetsOperations
@@ -150,32 +150,32 @@ async def reload_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context: Contexto del manejador
     """
     user = update.effective_user
-    
+
     try:
         # Recargar las categorías
         category_manager.reload_categories()
-        
+
         # Obtener estadísticas para el mensaje de confirmación
         num_expense_cats = len(category_manager.get_expense_category_names())
         num_income_cats = len(category_manager.income_categories)
         num_total_subcats = sum(len(subcats) for subcats in category_manager.expense_categories.values())
-        
+
         # Enviar confirmación al usuario
         message = f"✅ Categorías recargadas correctamente:\n"
         message += f"- Categorías de gastos: *{num_expense_cats}*\n"
         message += f"- Subcategorías totales: *{num_total_subcats}*\n"
         message += f"- Categorías de ingresos: *{num_income_cats}*"
-        
+
         await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
         logger.info(f"Categorías recargadas por {user.username or user.first_name}")
-        
+
     except Exception as e:
         logger.error(f"Error al recargar categorías: {e}")
         await update.message.reply_text(f"❌ Error al recargar las categorías: {str(e)}")
 
 
 async def register_transaction(
-    update: Update, context: ContextTypes.DEFAULT_TYPE, expense_type: str, amount: float, category: str, subcategory: str, date: str
+    update: Update, context: ContextTypes.DEFAULT_TYPE, expense_type: str, amount: float, category: str, subcategory: str, date: str, comment: str
 ) -> None:
     """
     Registra una transacción en la hoja de cálculo.
@@ -204,6 +204,7 @@ async def register_transaction(
             subcategory,  # Subcategoría
             amount,  # Monto
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Timestamp
+            comment,  # Comentario
         ]
 
         # Añadir la fila a la hoja correspondiente
@@ -215,9 +216,16 @@ async def register_transaction(
         # Para ingresos, donde la categoría y subcategoría son iguales, solo mostrar una vez
         category_display = f"{category}" if category == subcategory else f"{category} - {subcategory}"
 
-        await update.effective_message.reply_text(
-            f"✅ {expense_type.capitalize()} registrado correctamente:\nFecha: {date}\nCategoría: {category_display}\nMonto: {sign}{amount:.2f}\n"
+        # Crear mensaje de confirmación
+        confirm_message = (
+            f"✅ {expense_type.capitalize()} registrado correctamente:\nFecha: {date}\nCategoría: {category_display}\nMonto: {sign}{amount:.2f}"
         )
+
+        # Añadir comentario al mensaje si existe
+        if comment:
+            confirm_message += f"\nComentario: {comment}"
+
+        await update.effective_message.reply_text(confirm_message)
 
     except ValueError as e:
         await update.effective_message.reply_text(f"❌ Error: {str(e)}")
@@ -288,7 +296,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 "category": category,
                 "subcategory": category,  # Para ingresos, la categoría y subcategoría son la misma
                 "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+                "amount": None,  # Se llenará en el siguiente paso
+                "comment": "",  # Se llenará en el paso final
             }
+            # Establecer el estado como "waiting_amount"
+            context.user_data["state"] = "waiting_amount"
 
             await query.edit_message_text(
                 f"Has seleccionado *{category}* como {expense_type}.\nPor favor, envía el monto (solo números, ej: 123.45):", parse_mode="Markdown"
@@ -322,7 +334,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "category": category,
             "subcategory": subcategory,
             "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "amount": None,  # Se llenará en el siguiente paso
+            "comment": "",  # Se llenará en el paso final
         }
+        # Establecer el estado como "waiting_amount"
+        context.user_data["state"] = "waiting_amount"
 
         # Para ingresos, donde la categoría y subcategoría son iguales, ajustar el mensaje
         category_display = f"{category}" if category == subcategory else f"{category} - {subcategory}"
@@ -346,6 +362,58 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         return
 
+    # Si es una respuesta a la pregunta sobre agregar comentario
+    elif action == "comment":
+        option = data[1]  # "yes" o "no"
+        
+        # Verificamos que exista una transacción pendiente
+        if "pending_transaction" not in context.user_data:
+            logger.warning(f"Se intentó agregar comentario pero no hay transacción pendiente. User: {update.effective_user.id}")
+            await query.edit_message_text(
+                "❌ Error: La transacción ha expirado. Por favor, usa /agregar para iniciar una nueva transacción."
+            )
+            return
+        
+        # Agregamos logging para depuración
+        logger.info(f"Manejo de botón de comentario. Opción: {option}. User: {update.effective_user.id}")
+        if option == "yes":            
+            # El usuario quiere agregar un comentario
+            context.user_data["state"] = "waiting_comment"
+            # Extraer datos de la transacción para el mensaje
+            transaction = context.user_data["pending_transaction"]
+            expense_type = transaction["expense_type"]
+            category = transaction["category"]
+            amount = transaction["amount"]
+
+            # Mostrar categoría (con subcategoría si es un gasto)
+            if expense_type == "ingreso":
+                category_display = category
+            else:
+                subcategory = transaction["subcategory"]
+                category_display = f"{category} - {subcategory}"
+
+            await query.edit_message_text(
+                f"*{category_display}* - *{amount:.2f}*\n\nPor favor, escribe el comentario para esta transacción:", parse_mode="Markdown"
+            )
+        else:  # option == "no"
+            # El usuario no quiere agregar comentario, registrar la transacción sin comentario
+            transaction = context.user_data["pending_transaction"]
+            expense_type = transaction["expense_type"]
+            category = transaction["category"]
+            subcategory = transaction["subcategory"]
+            date = transaction["date"]
+            amount = transaction["amount"]
+
+            # Registrar la transacción sin comentario (cadena vacía)
+            await register_transaction(update, context, expense_type, amount, category, subcategory, date, "")
+
+            # Limpiar datos temporales
+            del context.user_data["pending_transaction"]
+            if "state" in context.user_data:
+                del context.user_data["state"]
+
+        return
+
     # Si llega aquí, es un comando desconocido
     await query.edit_message_text("❌ Acción no reconocida. Usa /agregar para comenzar nuevamente.")
 
@@ -358,47 +426,121 @@ async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         update: Objeto Update de Telegram
         context: Contexto del manejador
     """
-    # Verificar si hay una transacción pendiente
-    if "pending_transaction" not in context.user_data:
-        await update.message.reply_text("❌ No hay ninguna transacción en proceso. Usa /agregar para comenzar.")
+    # Verificar si hay una transacción pendiente y estamos esperando un monto
+    if "pending_transaction" not in context.user_data or context.user_data.get("state") != "waiting_amount":
+        # Si no estamos esperando un monto, ignoramos este mensaje (lo manejará otro handler)
         return
 
-    amount_text = update.message.text.strip()
-
-    # Validar que sea un número
+    # Logging para depuración
+    logger.info(f"Procesando monto para transacción. User: {update.effective_user.id}")
+    
     try:
-        amount = float(amount_text)
-        if amount <= 0:
-            await update.message.reply_text("⚠️ El monto debe ser un número positivo. Intenta de nuevo:")
+        amount_text = update.message.text.strip()
+        
+        # Validar que sea un número
+        try:
+            amount = float(amount_text)
+            if amount <= 0:
+                await update.message.reply_text("⚠️ El monto debe ser un número positivo. Intenta de nuevo:")
+                return
+        except ValueError:
+            await update.message.reply_text("⚠️ Por favor, ingresa solo números (ej: 123.45). Intenta de nuevo:")
             return
-    except ValueError:
-        await update.message.reply_text("⚠️ Por favor, ingresa solo números (ej: 123.45). Intenta de nuevo:")
+
+        # Guardar el monto en la transacción pendiente
+        context.user_data["pending_transaction"]["amount"] = amount
+        
+        # Cambiar el estado a "confirm_comment"
+        context.user_data["state"] = "confirm_comment"
+        
+        # Preparar la información de la transacción para mostrar
+        transaction = context.user_data["pending_transaction"]
+        expense_type = transaction["expense_type"]
+        category = transaction["category"]
+        
+        # Para ingresos, donde la categoría y subcategoría son iguales, ajustar el mensaje
+        if expense_type == "ingreso":
+            category_display = category
+        else:
+            subcategory = transaction["subcategory"]
+            category_display = f"{category} - {subcategory}"
+        
+        # Crear botones para confirmar si desea agregar un comentario
+        keyboard = [
+            [InlineKeyboardButton("✅ Sí", callback_data="comment|yes"),
+             InlineKeyboardButton("❌ No", callback_data="comment|no")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            f"Has seleccionado *{category_display}* como {expense_type} con monto *{amount:.2f}*.\n\n"
+            f"¿Deseas agregar un comentario a esta transacción?",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+    
+    except Exception as e:
+        # Si ocurre cualquier error, informar al usuario y registrar en el log
+        logger.error(f"Error al procesar monto: {e}")
+        await update.message.reply_text("❌ Error al procesar la transacción. Por favor, intenta nuevamente con /agregar.")
+
+
+async def comment_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Maneja la entrada del comentario y finaliza el registro de la transacción.
+
+    Args:
+        update: Objeto Update de Telegram
+        context: Contexto del manejador
+    """
+    # Verificar si hay una transacción pendiente y estamos esperando un comentario
+    if "pending_transaction" not in context.user_data or context.user_data.get("state") != "waiting_comment":
+        # Si no estamos esperando un comentario, ignoramos este mensaje (lo manejará otro handler)
         return
-
-    # Obtener datos de la transacción pendiente
-    transaction = context.user_data["pending_transaction"]
-    expense_type = transaction["expense_type"]
-    category = transaction["category"]
-    subcategory = transaction["subcategory"]
-    date = transaction["date"]
-
-    # Registrar la transacción
-    await register_transaction(update, context, expense_type, amount, category, subcategory, date)
-
-    # Limpiar datos temporales
-    del context.user_data["pending_transaction"]
+    
+    # Agregamos logging para depuración
+    logger.info(f"Procesando comentario para transacción. User: {update.effective_user.id}")
+    
+    try:
+        # Obtener el comentario ingresado
+        comment_text = update.message.text.strip()
+        
+        # Si el usuario escribe "sin comentario", guardar como cadena vacía
+        if comment_text.lower() == "sin comentario":
+            comment_text = ""
+        
+        # Obtener datos completos de la transacción pendiente
+        transaction = context.user_data["pending_transaction"]
+        expense_type = transaction["expense_type"]
+        category = transaction["category"]
+        subcategory = transaction["subcategory"]
+        date = transaction["date"]
+        amount = transaction["amount"]
+        
+        # Registrar la transacción con el comentario
+        await register_transaction(update, context, expense_type, amount, category, subcategory, date, comment_text)
+        
+        # Limpiar datos temporales
+        del context.user_data["pending_transaction"]
+        if "state" in context.user_data:
+            del context.user_data["state"]
+    
+    except Exception as e:
+        # Si ocurre cualquier error, informar al usuario y registrar en el log
+        logger.error(f"Error al procesar comentario: {e}")
+        await update.message.reply_text("❌ Error al procesar la transacción. Por favor, intenta nuevamente con /agregar.")
 
 
 async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Registra los comandos del bot en Telegram.
     Este manejador se ejecuta al inicio del bot.
-    
+
     Args:
         context: Contexto del manejador
     """
     from .commands import get_commands
-    
+
     try:
         # Establecer los comandos en el menú del bot
         await context.bot.set_my_commands(get_commands())

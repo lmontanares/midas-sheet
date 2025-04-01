@@ -10,6 +10,7 @@ from .handlers import (
     add_command,
     amount_handler,
     button_callback,
+    comment_handler,
     error_handler,
     help_command,
     register_bot_commands,
@@ -56,8 +57,27 @@ class TelegramBot:
         # Manejador para callbacks de botones
         self.application.add_handler(CallbackQueryHandler(button_callback))
 
-        # Manejador para capturar el monto cuando se está en proceso de una transacción
-        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.UpdateType.MESSAGE, amount_handler))
+        # Implementamos un sistema de estados mediante user_data para manejar la conversación
+        # Primero registramos el manejador para los comentarios (prioridad más alta)
+        # porque si estamos esperando un comentario, necesitamos capturarlo
+        self.application.add_handler(
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND & filters.UpdateType.MESSAGE,
+                comment_handler,
+                block=True
+            ),
+            group=1  # Grupo 1 tiene prioridad sobre grupo 2
+        )
+        
+        # Luego registramos el manejador para los montos (prioridad más baja)
+        self.application.add_handler(
+            MessageHandler(
+                filters.TEXT & ~filters.COMMAND & filters.UpdateType.MESSAGE,
+                amount_handler,
+                block=True
+            ),
+            group=2
+        )
 
         # Registrar manejador de errores
         self.application.add_error_handler(error_handler)
