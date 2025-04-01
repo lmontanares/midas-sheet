@@ -1,4 +1,4 @@
-# Documento de Transferencia: Sistema de Gestión Financiera
+# Documento de Transferencia: Sistema de Gestión Financiera v2.0
 
 ## 1. Visión general del proyecto
 
@@ -10,11 +10,20 @@ El sistema consta de dos componentes principales que trabajan de forma integrada
 1. Un bot de Telegram que sirve como interfaz de usuario para registrar transacciones financieras y consultar información.
 2. Un módulo de integración con Google Sheets que almacena y gestiona los datos financieros en la nube.
 
+El usuario interactúa con el bot siguiendo un flujo específico para registrar transacciones:
+1. El usuario envía el comando `/agregar`
+2. Elige tipo de transacción (ingreso o egreso)
+3. Selecciona una categoría
+4. Si seleccionó un egreso, selecciona una subcategoría (los ingresos no tienen subcategorías)
+5. Ingresa el monto de la transacción
+6. El sistema registra la transacción en la hoja de cálculo correspondiente
+
 ### Problemas que resuelve y valor que aporta
 - Simplifica el registro de gastos e ingresos sin necesidad de aplicaciones complejas
 - Permite acceder y gestionar información financiera desde cualquier dispositivo con Telegram
 - Centraliza los datos financieros en Google Sheets, facilitando análisis posteriores
 - Elimina la necesidad de herramientas costosas o complejas de finanzas personales
+- Proporciona una estructura jerárquica para categorizar gastos, facilitando análisis detallados
 
 ## 2. Ecosistema tecnológico
 
@@ -97,15 +106,21 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - **Patrón Factory**: Creación de manejadores para el bot de Telegram (en `commands.py`)
 - **Propiedades (@property)**: Para el acceso controlado a la configuración (en `config.py`)
 - **Inyección de dependencias**: Las clases reciben sus dependencias en el constructor (por ejemplo, `TelegramBot` recibe `SheetsOperations`)
+- **Nombres en inglés con documentación en español**: Convención adoptada donde los nombres de clases, funciones y variables están en inglés, pero los comentarios y documentación están en español
 
 ## 4. Estado actual del desarrollo
 
 ### Características implementadas y funcionalidades completas
 - Estructura básica completa del proyecto con organización modular
 - Configuración inicial para el bot de Telegram implementada
-- Manejadores básicos para comandos `/start` y `/help`
+- Manejadores para comandos `/start`, `/help`, y `/agregar`
 - Configuración inicial para la integración con Google Sheets
 - Sistema de logging con Loguru implementado
+- Implementación completa del comando `/agregar` con flujo interactivo mediante botones
+- Categorías predefinidas hardcodeadas en el código:
+  - Categorías de gastos con estructura jerárquica (categorías y subcategorías)
+  - Categorías de ingresos simples sin subcategorías
+- Integración con Google Sheets para almacenar las transacciones
 - **Sistema de pruebas completo**:
   - Pruebas unitarias para los componentes del bot
   - Pruebas para la integración con Google Sheets
@@ -119,8 +134,14 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - Configuración funcional del bot de Telegram
 - Gestión de configuración mediante variables de entorno
 - Implementación del mecanismo de logging con rotación de archivos
-- Estructura para modelos de datos y servicios creada pero sin implementación
-- Pruebas unitarias completas para los componentes existentes
+- Implementación del comando `/agregar` con soporte para:
+  - Selección de tipo de transacción (ingreso/egreso)
+  - Selección de categorías mediante botones
+  - Selección de subcategorías para gastos
+  - Entrada de montos
+  - Registro en hojas de cálculo
+- Las categorías y subcategorías están ahora hardcodeadas en el código en lugar de obtenerse de la hoja de cálculo
+- Las hojas "gastos" e "ingresos" incluyen ahora columnas para categoría y subcategoría
 
 ### Documentación técnica existente
 - Docstrings detallados en clases y métodos principales
@@ -131,39 +152,42 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 ## 5. Desafíos y consideraciones técnicas
 
 ### Problemas conocidos o limitaciones
-- El proyecto está en fase de esqueleto, sin implementación completa de funcionalidades financieras
-- No hay mecanismos de manejo avanzado de errores implementados
-- Falta la implementación de la lógica de negocio para finanzas
-- No existen comandos específicos para registro de transacciones financieras
-- No hay integración entre el bot y los datos financieros en hojas de cálculo
+- Las categorías y subcategorías están hardcodeadas en el código y no se pueden modificar fácilmente
+- No hay comandos para consultar o visualizar las transacciones registradas
+- No hay manejo de múltiples usuarios (no hay autenticación ni autorización)
+- No hay validación avanzada para los valores ingresados por los usuarios
+- No hay mecanismos para la edición o eliminación de transacciones erróneas
 
 ### Deuda técnica acumulada
-- La estructura para modelos y servicios está creada pero sin implementación
-- No hay validación de datos para las entradas financieras
-- El proyecto no tiene una estructura definida de hojas en Google Sheets
+- La estructura para modelos y servicios está creada pero sin implementación completa
+- No hay validación de datos exhaustiva para las entradas financieras
+- Las categorías hardcodeadas dificultan su mantenimiento y actualización
+- No hay documentación de usuario final
+- Faltan pruebas para algunos escenarios específicos con las nuevas funcionalidades
 
 ### Optimizaciones pendientes
 - Implementar caching para reducir llamadas a la API de Google
 - Mejorar el manejo de errores para situaciones específicas
 - Implementar validación de datos avanzada para las entradas financieras
 - Integrar herramientas automáticas de análisis de código (linters, formatters)
-- Implementar estructuración y validación automática de hojas de cálculo
+- Permitir la configuración de categorías desde un archivo externo o desde la interfaz de usuario
 
 ## 6. Hoja de ruta
 
 ### Próximos pasos inmediatos
-1. Implementar la lógica básica para registrar gastos e ingresos
-2. Desarrollar la funcionalidad para categorizar transacciones
-3. Crear visualizaciones simples de resúmenes financieros
-4. Implementar persistencia de datos en Google Sheets
-5. Crear nuevos comandos en el bot para funcionalidades financieras específicas
+1. Implementar comando para consultar transacciones recientes
+2. Implementar comando para visualizar resúmenes (ej: gastos por categoría)
+3. Mejorar la validación de datos de entrada
+4. Añadir funcionalidad para editar o eliminar transacciones
+5. Permitir la personalización de categorías sin modificar el código
 
 ### Características planificadas a medio/largo plazo
-1. Implementar reportes y análisis financieros
+1. Implementar reportes y análisis financieros más avanzados
 2. Agregar funcionalidades de presupuestos y alertas
 3. Integrar gráficos y visualizaciones a través de Telegram
 4. Permitir exportación de datos en diferentes formatos
 5. Implementar análisis inteligente de patrones de gasto
+6. Soporte para múltiples usuarios y perfiles
 
 ### Cronograma tentativo
 Información no disponible: No se ha establecido un cronograma formal para el desarrollo.
@@ -177,18 +201,24 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 4. **Loguru para logging**: Proporciona una interfaz más amigable y potente que el módulo logging estándar.
 5. **Pytest y pytest-mock para pruebas**: Framework moderno con mejor soporte para fixtures y mocking que unittest.
 6. **Separación en models, services, bot, sheets**: Facilita la evolución independiente de cada componente.
+7. **Categorías hardcodeadas**: Se decidió incluir las categorías directamente en el código para simplificar el desarrollo inicial, con planes de hacerlas configurables en el futuro.
+8. **Nombres en inglés, documentación en español**: Para seguir las mejores prácticas de desarrollo (nombres en inglés) mientras se mantiene la accesibilidad para desarrolladores hispanohablantes.
 
 ### Compensaciones (trade-offs) técnicos realizados
 1. **Simplicidad vs. Funcionalidad completa**: Se priorizó crear una estructura clara y simple sobre implementar todas las funcionalidades posibles.
 2. **Telegram como interfaz principal**: Se optó por Telegram como interfaz principal por su accesibilidad y simplicidad, aunque limita algunas opciones de UI avanzadas.
 3. **Google Sheets como base de datos**: Se eligió por su facilidad de uso y visualización, aunque no tiene las capacidades de un sistema de base de datos completo.
 4. **Pruebas con pytest-mock vs unittest.mock**: Se eligió pytest-mock por su mejor integración con pytest y sintaxis más limpia, aunque requiere una dependencia adicional.
+5. **Categorías hardcodeadas vs. configurables**: Se optó por definir las categorías en el código para acelerar el desarrollo inicial, sacrificando la flexibilidad.
+6. **Flujo guiado vs. entrada libre**: Se implementó un flujo guiado por pasos usando botones, lo que mejora la experiencia de usuario pero requiere más complejidad en el código.
 
 ### Lecciones aprendidas durante el desarrollo
 - La importancia de implementar un enfoque de testing robusto desde el inicio del proyecto.
 - El uso correcto de mocks es crucial para evitar problemas con APIs externas durante las pruebas.
 - La correcta estructura y modularización desde el inicio facilita la extensión del proyecto.
 - La documentación detallada de las pruebas facilita la comprensión del comportamiento esperado del sistema.
+- La implementación de flujos interactivos con botones mejora significativamente la experiencia de usuario.
+- Definir un formato claro para los callback data es esencial para manejar las interacciones con botones.
 
 ## 8. Recursos adicionales
 
@@ -214,7 +244,27 @@ El proyecto está configurado para ejecutarse en un entorno local de desarrollo.
 7. Ejecutar pruebas: `pytest` o `pytest --cov=src`
 8. Ejecutar la aplicación: `python main.py`
 
-Las áreas prioritarias para continuar el desarrollo son:
-1. Ampliar los comandos del bot para gestionar transacciones
-2. Implementar operaciones CRUD en `src/sheets/operations.py`
-3. Estructurar las hojas de cálculo para almacenar diferentes tipos de datos financieros
+## Cambios recientes importantes
+
+Las modificaciones más significativas en la última versión incluyen:
+
+1. **Implementación del comando `/agregar`**:
+   - Flujo completo de registro de transacciones con interfaz interactiva mediante botones
+   - Soporte para selección de categorías y subcategorías
+
+2. **Categorías predefinidas**:
+   - Las categorías de gastos están organizadas jerárquicamente (con subcategorías)
+   - Las categorías de ingresos no tienen subcategorías
+   - Se han hardcodeado directamente en el código para simplificar la implementación inicial
+
+3. **Estructura de datos**:
+   - Las hojas "gastos" e "ingresos" tienen columnas para categoría y subcategoría
+   - El formato de datos incluye: Fecha, Usuario, Categoría, Subcategoría, Monto, Timestamp
+
+4. **Flujo de interacción**:
+   - Se implementó un flujo específico: comando → tipo → categoría → subcategoría (solo para gastos) → monto
+   - Uso de InlineKeyboardMarkup para crear botones interactivos
+
+5. **Convención de nomenclatura**:
+   - Se adoptó la convención de usar nombres en inglés para variables, funciones y clases
+   - La documentación y comentarios se mantienen en español
