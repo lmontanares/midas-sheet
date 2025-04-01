@@ -1,4 +1,4 @@
-# Documento de Transferencia: Sistema de Gestión Financiera v2.0
+# Documento de Transferencia: Sistema de Gestión Financiera v2.1
 
 ## 1. Visión general del proyecto
 
@@ -36,10 +36,13 @@ El usuario interactúa con el bot siguiendo un flujo específico para registrar 
 - **Google Sheets:**
   - gspread: Biblioteca para interactuar con Google Sheets
   - google-auth: Autenticación con servicios de Google
+- **Configuración y Datos:**
+  - pyyaml: Para manejo de archivos de configuración YAML
 - **Utilidades:**
   - loguru: Sistema avanzado de logging
   - python-dotenv: Gestión de variables de entorno
   - pydantic: Validación de datos
+  - pathlib: Manejo de rutas de archivos de forma moderna
 - **Testing:**
   - pytest: Framework principal de pruebas
   - pytest-asyncio: Soporte para pruebas asíncronas
@@ -76,6 +79,11 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 │   │   ├── handlers.py   # Manejadores de mensajes y comandos
 │   │   └── commands.py   # Definiciones de comandos
 │   │
+│   ├── config/           # Configuraciones externas
+│   │   ├── __init__.py   # Inicialización del módulo
+│   │   ├── categories.py # Gestor de categorías
+│   │   └── categories.yaml # Archivo de configuración de categorías
+│   │
 │   ├── sheets/           # Integración con Google Sheets
 │   │   ├── client.py     # Cliente para conectar con Google Sheets
 │   │   └── operations.py # Operaciones con las hojas de cálculo
@@ -104,8 +112,10 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 ### Patrones de diseño implementados
 - **Patrón Cliente**: Encapsulación del acceso a Google Sheets en una clase cliente (`GoogleSheetsClient`)
 - **Patrón Factory**: Creación de manejadores para el bot de Telegram (en `commands.py`)
-- **Propiedades (@property)**: Para el acceso controlado a la configuración (en `config.py`)
+- **Patrón Gestor de Configuración**: Implementado con la clase `CategoryManager` que centraliza el acceso a las configuraciones de categorías
+- **Propiedades (@property)**: Para el acceso controlado a la configuración (en `config.py` y `categories.py`)
 - **Inyección de dependencias**: Las clases reciben sus dependencias en el constructor (por ejemplo, `TelegramBot` recibe `SheetsOperations`)
+- **Callback asíncronos**: Uso de `post_init` para registro de comandos del bot de forma asíncrona
 - **Nombres en inglés con documentación en español**: Convención adoptada donde los nombres de clases, funciones y variables están en inglés, pero los comentarios y documentación están en español
 
 ## 4. Estado actual del desarrollo
@@ -113,14 +123,21 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 ### Características implementadas y funcionalidades completas
 - Estructura básica completa del proyecto con organización modular
 - Configuración inicial para el bot de Telegram implementada
-- Manejadores para comandos `/start`, `/help`, y `/agregar`
+- Manejadores para comandos `/start`, `/help`, `/agregar` y `/recargar`
 - Configuración inicial para la integración con Google Sheets
 - Sistema de logging con Loguru implementado
-- Implementación completa del comando `/agregar` con flujo interactivo mediante botones
-- Categorías predefinidas hardcodeadas en el código:
+- Implementación completa del comando `/agregar` con flujo interactivo mediante botones:
+  - Selección clara del tipo de transacción (ingreso/egreso) como primer paso
+  - Selección de categorías mediante botones
+  - Selección de subcategorías para gastos
+  - Entrada de montos
+  - Registro en hojas de cálculo
+- Sistema de categorías configurables desde archivo YAML externo:
   - Categorías de gastos con estructura jerárquica (categorías y subcategorías)
   - Categorías de ingresos simples sin subcategorías
+- Capacidad para recargar las categorías en tiempo de ejecución sin reiniciar el bot
 - Integración con Google Sheets para almacenar las transacciones
+- Uso de `pathlib.Path` para manejo moderno de rutas de archivos
 - **Sistema de pruebas completo**:
   - Pruebas unitarias para los componentes del bot
   - Pruebas para la integración con Google Sheets
@@ -134,43 +151,51 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - Configuración funcional del bot de Telegram
 - Gestión de configuración mediante variables de entorno
 - Implementación del mecanismo de logging con rotación de archivos
-- Implementación del comando `/agregar` con soporte para:
-  - Selección de tipo de transacción (ingreso/egreso)
-  - Selección de categorías mediante botones
-  - Selección de subcategorías para gastos
-  - Entrada de montos
-  - Registro en hojas de cálculo
-- Las categorías y subcategorías están ahora hardcodeadas en el código en lugar de obtenerse de la hoja de cálculo
-- Las hojas "gastos" e "ingresos" incluyen ahora columnas para categoría y subcategoría
+- Resolución de problemas con coroutines asíncronas en el bot de Telegram
+- Externalización completa de las categorías a un archivo YAML:
+  - Creación de un gestor de categorías (`CategoryManager`)
+  - Implementación de método para recargar categorías sin reiniciar el bot
+  - Comando `/recargar` para actualizar categorías en tiempo de ejecución
+- Mejoras en el flujo de interacción de `/agregar`:
+  - Selección clara entre ingresos y gastos como primer paso
+  - Navegación intuitiva entre las diferentes opciones
+  - Posibilidad de volver atrás en cualquier punto del flujo
+- Las hojas "gastos" e "ingresos" incluyen columnas para categoría y subcategoría
 
 ### Documentación técnica existente
 - Docstrings detallados en clases y métodos principales
 - README.md con instrucciones de instalación y uso
 - Documentación de pruebas en tests/README.md
 - Estructura del proyecto bien organizada y documentada
+- Archivo YAML con documentación clara sobre las categorías
+- Documento de transferencia detallado (este documento)
 
 ## 5. Desafíos y consideraciones técnicas
 
 ### Problemas conocidos o limitaciones
-- Las categorías y subcategorías están hardcodeadas en el código y no se pueden modificar fácilmente
 - No hay comandos para consultar o visualizar las transacciones registradas
 - No hay manejo de múltiples usuarios (no hay autenticación ni autorización)
 - No hay validación avanzada para los valores ingresados por los usuarios
 - No hay mecanismos para la edición o eliminación de transacciones erróneas
+- El manejo asíncrono entre Python y python-telegram-bot puede ser complejo:
+  - Se ha implementado una solución utilizando post_init callbacks para el registro de comandos
+  - Pueden surgir advertencias relacionadas con coroutines no esperadas, que no afectan la funcionalidad
 
 ### Deuda técnica acumulada
 - La estructura para modelos y servicios está creada pero sin implementación completa
 - No hay validación de datos exhaustiva para las entradas financieras
-- Las categorías hardcodeadas dificultan su mantenimiento y actualización
+- Las cargas asíncronas para múltiples componentes no están implementadas de manera óptima
 - No hay documentación de usuario final
-- Faltan pruebas para algunos escenarios específicos con las nuevas funcionalidades
+- Faltan pruebas para algunos escenarios específicos con las nuevas funcionalidades:
+  - Pruebas para el gestor de categorías
+  - Pruebas para la recarga de categorías en tiempo de ejecución
 
 ### Optimizaciones pendientes
 - Implementar caching para reducir llamadas a la API de Google
 - Mejorar el manejo de errores para situaciones específicas
 - Implementar validación de datos avanzada para las entradas financieras
 - Integrar herramientas automáticas de análisis de código (linters, formatters)
-- Permitir la configuración de categorías desde un archivo externo o desde la interfaz de usuario
+- Mejorar el manejo asíncrono de operaciones para evitar advertencias
 
 ## 6. Hoja de ruta
 
@@ -179,7 +204,9 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 2. Implementar comando para visualizar resúmenes (ej: gastos por categoría)
 3. Mejorar la validación de datos de entrada
 4. Añadir funcionalidad para editar o eliminar transacciones
-5. Permitir la personalización de categorías sin modificar el código
+5. Implementar pruebas para las nuevas funcionalidades:
+   - Pruebas para el gestor de categorías
+   - Pruebas para la recarga de categorías
 
 ### Características planificadas a medio/largo plazo
 1. Implementar reportes y análisis financieros más avanzados
@@ -200,17 +227,20 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 3. **Estructura modular**: Facilita la extensión y mantenimiento del código, con clara separación de responsabilidades.
 4. **Loguru para logging**: Proporciona una interfaz más amigable y potente que el módulo logging estándar.
 5. **Pytest y pytest-mock para pruebas**: Framework moderno con mejor soporte para fixtures y mocking que unittest.
-6. **Separación en models, services, bot, sheets**: Facilita la evolución independiente de cada componente.
-7. **Categorías hardcodeadas**: Se decidió incluir las categorías directamente en el código para simplificar el desarrollo inicial, con planes de hacerlas configurables en el futuro.
+6. **Separación en models, services, bot, sheets, config**: Facilita la evolución independiente de cada componente.
+7. **Uso de YAML para configurar categorías**: Permite modificar las categorías sin necesidad de alterar el código.
 8. **Nombres en inglés, documentación en español**: Para seguir las mejores prácticas de desarrollo (nombres en inglés) mientras se mantiene la accesibilidad para desarrolladores hispanohablantes.
+9. **Uso de `pathlib.Path`**: Proporciona una forma moderna y orientada a objetos para manipular rutas de archivos.
+10. **Post-init callback para comandos**: Soluciona los problemas con coroutines asíncronas sin complicar excesivamente la arquitectura.
 
 ### Compensaciones (trade-offs) técnicos realizados
 1. **Simplicidad vs. Funcionalidad completa**: Se priorizó crear una estructura clara y simple sobre implementar todas las funcionalidades posibles.
 2. **Telegram como interfaz principal**: Se optó por Telegram como interfaz principal por su accesibilidad y simplicidad, aunque limita algunas opciones de UI avanzadas.
 3. **Google Sheets como base de datos**: Se eligió por su facilidad de uso y visualización, aunque no tiene las capacidades de un sistema de base de datos completo.
 4. **Pruebas con pytest-mock vs unittest.mock**: Se eligió pytest-mock por su mejor integración con pytest y sintaxis más limpia, aunque requiere una dependencia adicional.
-5. **Categorías hardcodeadas vs. configurables**: Se optó por definir las categorías en el código para acelerar el desarrollo inicial, sacrificando la flexibilidad.
+5. **Categorías en YAML vs. base de datos**: Se optó por almacenar las categorías en un archivo YAML por su simplicidad y facilidad de edición, sacrificando algunas capacidades de consulta avanzada.
 6. **Flujo guiado vs. entrada libre**: Se implementó un flujo guiado por pasos usando botones, lo que mejora la experiencia de usuario pero requiere más complejidad en el código.
+7. **Manejo de asincronía**: Se eligió un enfoque con post_init callbacks para evitar problemas de bucles de eventos, priorizando la estabilidad sobre la pureza del diseño.
 
 ### Lecciones aprendidas durante el desarrollo
 - La importancia de implementar un enfoque de testing robusto desde el inicio del proyecto.
@@ -219,6 +249,9 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 - La documentación detallada de las pruebas facilita la comprensión del comportamiento esperado del sistema.
 - La implementación de flujos interactivos con botones mejora significativamente la experiencia de usuario.
 - Definir un formato claro para los callback data es esencial para manejar las interacciones con botones.
+- El manejo correcto de la asincronía en Python requiere considerar cuidadosamente los bucles de eventos y coroutines.
+- La externalización de configuraciones a archivos YAML mejora significativamente la mantenibilidad del código.
+- El uso de pathlib simplifica y hace más robusta la manipulación de rutas de archivos.
 
 ## 8. Recursos adicionales
 
@@ -246,25 +279,31 @@ El proyecto está configurado para ejecutarse en un entorno local de desarrollo.
 
 ## Cambios recientes importantes
 
-Las modificaciones más significativas en la última versión incluyen:
+Las modificaciones más significativas en la última versión (v2.1) incluyen:
 
-1. **Implementación del comando `/agregar`**:
-   - Flujo completo de registro de transacciones con interfaz interactiva mediante botones
-   - Soporte para selección de categorías y subcategorías
+1. **Externalización de categorías a archivo YAML**:
+   - Se creó el módulo `src/config` para gestionar configuraciones externas
+   - Se implementó la clase `CategoryManager` para cargar y gestionar categorías
+   - Se movieron las categorías hardcodeadas a `categories.yaml`
 
-2. **Categorías predefinidas**:
-   - Las categorías de gastos están organizadas jerárquicamente (con subcategorías)
-   - Las categorías de ingresos no tienen subcategorías
-   - Se han hardcodeado directamente en el código para simplificar la implementación inicial
+2. **Implementación del comando `/recargar`**:
+   - Permite actualizar las categorías sin reiniciar el bot
+   - Muestra estadísticas sobre las categorías cargadas
 
-3. **Estructura de datos**:
-   - Las hojas "gastos" e "ingresos" tienen columnas para categoría y subcategoría
-   - El formato de datos incluye: Fecha, Usuario, Categoría, Subcategoría, Monto, Timestamp
+3. **Mejoras en el flujo de `/agregar`**:
+   - Ahora comienza con la selección clara entre GASTOS e INGRESOS
+   - Navegación mejorada con botones para volver atrás
+   - Mejor separación de responsabilidades en el código
 
-4. **Flujo de interacción**:
-   - Se implementó un flujo específico: comando → tipo → categoría → subcategoría (solo para gastos) → monto
-   - Uso de InlineKeyboardMarkup para crear botones interactivos
+4. **Mejoras en manejo asíncrono**:
+   - Implementación de `post_init` callback para registro de comandos
+   - Solución a advertencias sobre coroutines no esperadas
 
-5. **Convención de nomenclatura**:
-   - Se adoptó la convención de usar nombres en inglés para variables, funciones y clases
-   - La documentación y comentarios se mantienen en español
+5. **Uso de `pathlib.Path`**:
+   - Reemplazo de funciones tradicionales de os.path por Path
+   - Manejo más moderno, seguro y legible de rutas de archivos
+
+6. **Correcciones de bugs**:
+   - Solución a problemas con bucles de eventos asíncronos
+   - Manejo correcto de coroutines en el ciclo de vida del bot
+   - Mejor gestión de errores en general
