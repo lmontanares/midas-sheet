@@ -59,6 +59,7 @@ expense_categories:
   FUTURO:
     - Ahorros
     - Inversiones
+    - Vivienda Propia
 
 # Categorías de ingresos (sin subcategorías)
 income_categories:
