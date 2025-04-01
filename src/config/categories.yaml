@@ -1,0 +1,65 @@
+# Configuración de categorías para el sistema de gestión financiera
+
+# Categorías de gastos con estructura jerárquica (categorías y subcategorías)
+expense_categories:
+  HOME:
+    - "Mortgage / Rent"
+    - "Electricity"
+    - "Gas / Oil"
+    - "Water / Sewer / Trash"
+    - "Phone"
+    - "Cable / Satellite"
+    - "Internet"
+    - "Furnishing / Appliances"
+    - "Lawn / Garden"
+    - "Maintenance / Improvements"
+    - "Other"
+  
+  TRANSPORTATION:
+    - "Uber"
+    - "Car Payments"
+    - "Auto Insurance"
+    - "Fuel"
+    - "Public Transporation"
+    - "Repairs / Maintenance"
+    - "Registration / License"
+  
+  DAILY LIVING:
+    - "Groceries"
+    - "Dining Out"
+    - "Clothing"
+    - "Cleaning"
+    - "Salon / Barber"
+    - "Pet Supplies"
+  
+  ENTERTAINMENT:
+    - "XXXX"
+    - "Concerts / Plays"
+    - "Sports"
+    - "Outdoor Recreation"
+  
+  HEALTH:
+    - "Health Insurance"
+    - "XXXX"
+    - "Doctors / Dentist Visits"
+    - "Medicine / Prescriptions"
+    - "Veterinarian"
+    - "Life Insurance"
+  
+  VACATION / HOLIDAY:
+    - "Airfare"
+    - "Accommodations"
+    - "Food"
+    - "Souvenirs"
+    - "Pet Boarding"
+    - "Rental Car"
+
+# Categorías de ingresos (sin subcategorías)
+income_categories:
+  - "Salary / Wages"
+  - "Interest Income"
+  - "Dividends"
+  - "Refunds / Reimbursements"
+  - "Business"
+  - "Pension"
+  - "Misc."

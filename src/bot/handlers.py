@@ -7,33 +7,10 @@ import datetime
 from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
+from telegram.constants import ParseMode
 
+from src.config.categories import category_manager
 from src.sheets.operations import SheetsOperations
-
-# Categorías de gastos hardcoded en formato JSON
-EXPENSE_CATEGORIES = {
-    "HOME": [
-        "Mortgage / Rent",
-        "Electricity",
-        "Gas / Oil",
-        "Water / Sewer / Trash",
-        "Phone",
-        "Cable / Satellite",
-        "Internet",
-        "Furnishing / Appliances",
-        "Lawn / Garden",
-        "Maintenance / Improvements",
-        "Other",
-    ],
-    "TRANSPORTATION": ["Uber", "Car Payments", "Auto Insurance", "Fuel", "Public Transporation", "Repairs / Maintenance", "Registration / License"],
-    "DAILY LIVING": ["Groceries", "Dining Out", "Clothing", "Cleaning", "Salon / Barber", "Pet Supplies"],
-    "ENTERTAINMENT": ["XXXX", "Concerts / Plays", "Sports", "Outdoor Recreation"],
-    "HEALTH": ["Health Insurance", "XXXX", "Doctors / Dentist Visits", "Medicine / Prescriptions", "Veterinarian", "Life Insurance"],
-    "VACATION / HOLIDAY": ["Airfare", "Accommodations", "Food", "Souvenirs", "Pet Boarding", "Rental Car"],
-}
-
-# Categorías de ingresos (sin subcategorías)
-INCOME_CATEGORIES = ["Salary / Wages", "Interest Income", "Dividends", "Refunds / Reimbursements", "Business", "Pension", "Misc."]
 
 
 def get_category_keyboard(expense_type: str = "gasto") -> InlineKeyboardMarkup:
@@ -52,13 +29,13 @@ def get_category_keyboard(expense_type: str = "gasto") -> InlineKeyboardMarkup:
     # Diferentes categorías según el tipo (gasto o ingreso)
     if expense_type == "gasto":
         # Para gastos, mostrar categorías principales
-        for category in EXPENSE_CATEGORIES.keys():
+        for category in category_manager.get_expense_category_names():
             # Formato del callback data: "category|expense_type|category_name"
             callback_data = f"category|{expense_type}|{category}"
             buttons.append([InlineKeyboardButton(category, callback_data=callback_data)])
     else:
         # Para ingresos, mostrar las categorías como categorías principales
-        for category in INCOME_CATEGORIES:
+        for category in category_manager.income_categories:
             # Formato del callback data: "category|expense_type|category_name"
             callback_data = f"category|{expense_type}|{category}"
             buttons.append([InlineKeyboardButton(category, callback_data=callback_data)])
@@ -82,7 +59,7 @@ def get_subcategory_keyboard(main_category: str, expense_type: str) -> InlineKey
         Teclado de botones para Telegram
     """
     # Obtener subcategorías de la categoría principal
-    subcategories = EXPENSE_CATEGORIES.get(main_category, [])
+    subcategories = category_manager.get_subcategories(main_category)
 
     # Crear lista de botones para subcategorías
     buttons = []
@@ -124,6 +101,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     /start - Inicia el bot
     /help - Muestra este mensaje de ayuda
     /agregar - Muestra las categorías disponibles como botones para registrar una transacción
+    /recargar - Recarga las categorías desde el archivo de configuración
 
     Pronto se agregarán más funciones...
     """
@@ -160,6 +138,40 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     except Exception as e:
         logger.error(f"Error al mostrar el selector de tipo: {e}")
         await update.message.reply_text("❌ Error al iniciar el proceso de registro")
+
+
+async def reload_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Manejador para el comando /recargar.
+    Recarga las categorías desde el archivo de configuración.
+
+    Args:
+        update: Objeto Update de Telegram
+        context: Contexto del manejador
+    """
+    user = update.effective_user
+    
+    try:
+        # Recargar las categorías
+        category_manager.reload_categories()
+        
+        # Obtener estadísticas para el mensaje de confirmación
+        num_expense_cats = len(category_manager.get_expense_category_names())
+        num_income_cats = len(category_manager.income_categories)
+        num_total_subcats = sum(len(subcats) for subcats in category_manager.expense_categories.values())
+        
+        # Enviar confirmación al usuario
+        message = f"✅ Categorías recargadas correctamente:\n"
+        message += f"- Categorías de gastos: *{num_expense_cats}*\n"
+        message += f"- Subcategorías totales: *{num_total_subcats}*\n"
+        message += f"- Categorías de ingresos: *{num_income_cats}*"
+        
+        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+        logger.info(f"Categorías recargadas por {user.username or user.first_name}")
+        
+    except Exception as e:
+        logger.error(f"Error al recargar categorías: {e}")
+        await update.message.reply_text(f"❌ Error al recargar las categorías: {str(e)}")
 
 
 async def register_transaction(

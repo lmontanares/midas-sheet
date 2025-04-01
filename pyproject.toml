@@ -9,6 +9,7 @@ dependencies = [
     "loguru>=0.7.3",
     "python-dotenv>=1.1.0",
     "python-telegram-bot>=22.0",
+    "pyyaml>=6.0.2",
 ]
 
 [dependency-groups]

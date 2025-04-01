@@ -13,6 +13,7 @@ from .handlers import (
     button_callback,
     error_handler,
     help_command,
+    reload_command,
     start_command,
 )
 
@@ -50,6 +51,7 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("start", start_command))
         self.application.add_handler(CommandHandler("help", help_command))
         self.application.add_handler(CommandHandler("agregar", add_command))
+        self.application.add_handler(CommandHandler("recargar", reload_command))
 
         # Manejador para callbacks de botones
         self.application.add_handler(CallbackQueryHandler(button_callback))
