@@ -1,65 +1,66 @@
+---
 # Configuración de categorías para el sistema de gestión financiera
 
 # Categorías de gastos con estructura jerárquica (categorías y subcategorías)
 expense_categories:
-  HOME:
-    - "Mortgage / Rent"
-    - "Electricity"
-    - "Gas / Oil"
-    - "Water / Sewer / Trash"
-    - "Phone"
-    - "Cable / Satellite"
-    - "Internet"
-    - "Furnishing / Appliances"
-    - "Lawn / Garden"
-    - "Maintenance / Improvements"
-    - "Other"
-  
-  TRANSPORTATION:
-    - "Uber"
-    - "Car Payments"
-    - "Auto Insurance"
-    - "Fuel"
-    - "Public Transporation"
-    - "Repairs / Maintenance"
-    - "Registration / License"
-  
-  DAILY LIVING:
-    - "Groceries"
-    - "Dining Out"
-    - "Clothing"
-    - "Cleaning"
-    - "Salon / Barber"
-    - "Pet Supplies"
-  
-  ENTERTAINMENT:
-    - "XXXX"
-    - "Concerts / Plays"
-    - "Sports"
-    - "Outdoor Recreation"
-  
-  HEALTH:
-    - "Health Insurance"
-    - "XXXX"
-    - "Doctors / Dentist Visits"
-    - "Medicine / Prescriptions"
-    - "Veterinarian"
-    - "Life Insurance"
-  
-  VACATION / HOLIDAY:
-    - "Airfare"
-    - "Accommodations"
-    - "Food"
-    - "Souvenirs"
-    - "Pet Boarding"
-    - "Rental Car"
+  HOGAR:
+    - Hipoteca / Alquiler
+    - Electricidad
+    - Gas / Calefacción
+    - Agua / Alcantarillado / Basura
+    - Teléfono
+    - Cable / Satélite
+    - Internet
+    - Mobiliario / Electrodomésticos
+    - Jardín / Patio
+    - Mantenimiento / Mejoras
+    - Otros
+
+  TRANSPORTE:
+    - Uber
+    - Pagos del Automóvil
+    - Seguro de Auto
+    - Combustible
+    - Transporte Público
+    - Reparaciones / Mantenimiento
+    - Registro / Licencia
+
+  VIDA_DIARIA:
+    - Comestibles
+    - Comer Fuera
+    - Ropa
+    - Limpieza
+    - Salón / Barbería
+    - Artículos para Mascotas
+
+  ENTRETENIMIENTO:
+    - Games
+    - Conciertos / Teatro
+    - Deportes
+    - Recreación al Aire Libre
+
+  SALUD:
+    - Seguro de Salud
+    - Examenes
+    - Visitas Médicas / Dentista
+    - Medicamentos / Recetas
+    - Veterinario
+    - Seguro de Vida
+
+  VACACIONES_DIAS_FESTIVOS:
+    - Pasajes Aéreos
+    - Alojamiento
+    - Comida
+    - Recuerdos
+    - Hospedaje de Mascotas
+    - Alquiler de Automóvil
 
 # Categorías de ingresos (sin subcategorías)
 income_categories:
-  - "Salary / Wages"
-  - "Interest Income"
-  - "Dividends"
-  - "Refunds / Reimbursements"
-  - "Business"
-  - "Pension"
-  - "Misc."
+  - Salario / Sueldos
+  - Ingresos por Intereses
+  - Dividendos
+  - Reembolsos / Devoluciones
+  - Negocio
+  - Pensión
+  - Varios
