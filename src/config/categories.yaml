@@ -48,7 +48,7 @@ expense_categories:
     - Veterinario
     - Seguro de Vida
 
-  VACACIONES_DIAS_FESTIVOS:
+  VACACIONES_FESTIVOS:
     - Pasajes Aéreos
     - Alojamiento
     - Comida
