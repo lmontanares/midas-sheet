@@ -15,6 +15,6 @@ def get_commands() -> list[BotCommand]:
     return [
         BotCommand("start", "Inicia el bot"),
         BotCommand("help", "Muestra ayuda sobre los comandos disponibles"),
-        BotCommand("add", "Agrega una transacción financiera"),
+        BotCommand("agregar", "Agrega una transacción financiera"),
         # Aquí se añadirán más comandos en el futuro
     ]

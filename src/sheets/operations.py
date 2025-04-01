@@ -37,13 +37,13 @@ class SheetsOperations:
         try:
             self.spreadsheet = self.client.open_spreadsheet(self.spreadsheet_id)
             logger.info(f"Hoja de cálculo configurada: {self.spreadsheet.title}")
-            
+
             # Inicializar las hojas necesarias
             self.ensure_sheets_exist()
         except Exception as e:
             logger.error(f"Error al configurar la hoja de cálculo: {e}")
             raise
-            
+
     def ensure_sheets_exist(self) -> None:
         """
         Asegura que existan las hojas necesarias para la aplicación.
@@ -51,11 +51,12 @@ class SheetsOperations:
         """
         required_sheets = {
             "gastos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp"],
-            "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp"]
+            "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp"],
+            "General": [],
         }
-        
+
         existing_sheets = [ws.title for ws in self.spreadsheet.worksheets()]
-        
+
         for sheet_name, headers in required_sheets.items():
             if sheet_name not in existing_sheets:
                 # Crear la hoja con los encabezados
@@ -66,7 +67,7 @@ class SheetsOperations:
                 # Verificar que los encabezados sean correctos
                 worksheet = self.spreadsheet.worksheet(sheet_name)
                 actual_headers = worksheet.row_values(1)
-                
+
                 if not actual_headers:
                     # La hoja existe pero está vacía
                     worksheet.append_row(headers)
@@ -98,18 +99,18 @@ class SheetsOperations:
         except Exception as e:
             logger.error(f"Error al obtener la hoja '{sheet_name}': {e}")
             raise ValueError(f"La hoja '{sheet_name}' no existe")
-            
+
     def append_row(self, sheet_name: str, values: list[Any]) -> bool:
         """
         Añade una fila de datos al final de una hoja específica.
-        
+
         Args:
             sheet_name: Nombre de la hoja donde añadir los datos
             values: Lista de valores a añadir como nueva fila
-            
+
         Returns:
             True si la operación fue exitosa
-            
+
         Raises:
             ValueError: Si no se encuentra la hoja
             RuntimeError: Si no se ha configurado la hoja de cálculo
@@ -121,4 +122,39 @@ class SheetsOperations:
             return True
         except Exception as e:
             logger.error(f"Error al añadir datos a la hoja '{sheet_name}': {e}")
+            raise
+
+    def get_column_values(self, sheet_name: str, column: str) -> list[str]:
+        """
+        Obtiene todos los valores no vacíos de una columna específica.
+
+        Args:
+            sheet_name: Nombre de la hoja de donde obtener los datos
+            column: Letra de la columna (ej: 'A', 'B', 'G', etc.)
+
+        Returns:
+            Lista de valores de la columna, excluyendo celdas vacías
+
+        Raises:
+            ValueError: Si no se encuentra la hoja o la columna no es válida
+            RuntimeError: Si no se ha configurado la hoja de cálculo
+        """
+        try:
+            # Validar que column sea una letra válida
+            if not (isinstance(column, str) and len(column) == 1 and column.isalpha()):
+                raise ValueError(f"El valor de columna '{column}' no es válido. Debe ser una letra.")
+
+            worksheet = self.get_worksheet(sheet_name)
+
+            # Obtener el índice numérico de la columna (A=1, B=2, etc.)
+            col_idx = ord(column.upper()) - ord("A") + 1
+
+            # Obtener todos los valores de la columna
+            all_values = worksheet.col_values(col_idx)
+
+            # Filtrar valores vacíos y devolver el resultado
+            return [value for value in all_values if value.strip()]
+
+        except Exception as e:
+            logger.error(f"Error al obtener valores de la columna '{column}' en la hoja '{sheet_name}': {e}")
             raise

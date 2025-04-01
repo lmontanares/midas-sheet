@@ -58,6 +58,14 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user = update.effective_user
     args = context.args
 
+    # Obtener el objeto SheetsOperations del contexto del bot
+    sheets_ops: SheetsOperations | None = context.bot_data.get("sheets_operations")
+
+    if not sheets_ops:
+        await update.message.reply_text("❗ Error: No se pudo acceder a la hoja de cálculo")
+        logger.error("SheetsOperations no disponible en bot_data")
+        return
+
     # Verificar que hay suficientes argumentos
     if not args or len(args) < 3:
         await update.message.reply_text(
@@ -83,7 +91,24 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text("⚠️ El monto debe ser un número válido")
         return
 
+    # Verificar que la categoría sea válida (debe existir en la columna G de la hoja "General")
     categoria = args[2]
+    try:
+        # Obtener lista de categorías válidas
+        categorias_validas = sheets_ops.get_column_values("General", "G")
+
+        # Excluir el encabezado si existe
+        if categorias_validas and categorias_validas[0].lower() == "categorías":
+            categorias_validas = categorias_validas[1:]
+
+        if categorias_validas and categoria not in categorias_validas:
+            # Mostrar categorías disponibles
+            categorias_texto = ", ".join(categorias_validas)
+            await update.message.reply_text(f"⚠️ La categoría '{categoria}' no es válida.\n\nCategorías disponibles: {categorias_texto}")
+            return
+    except Exception as e:
+        logger.warning(f"No se pudieron verificar las categorías válidas: {e}")
+        # Continuamos sin validar la categoría si hay error
 
     # Procesar la fecha (opcional)
     fecha = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -100,14 +125,6 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     # Insertar los datos en la hoja de cálculo
     try:
-        # Obtener el objeto SheetsOperations del contexto del bot
-        sheets_ops: SheetsOperations | None = context.bot_data.get("sheets_operations")
-
-        if not sheets_ops:
-            await update.message.reply_text("❌ Error: No se pudo acceder a la hoja de cálculo")
-            logger.error("SheetsOperations no disponible en bot_data")
-            return
-
         # Preparar la fila para añadir
         row_data = [
             fecha,  # Fecha
