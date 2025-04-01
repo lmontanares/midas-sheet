@@ -3,11 +3,18 @@ Configuración principal del bot de Telegram.
 """
 
 from loguru import logger
-from telegram.ext import Application, ApplicationBuilder, CommandHandler
+from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from ..sheets.operations import SheetsOperations
 from .commands import get_commands
-from .handlers import add_command, error_handler, help_command, start_command
+from .handlers import (
+    add_command,
+    amount_handler,
+    button_callback,
+    error_handler,
+    help_command,
+    start_command,
+)
 
 
 class TelegramBot:
@@ -23,6 +30,7 @@ class TelegramBot:
 
         Args:
             token: Token de acceso del bot de Telegram
+            sheets: Operaciones para la hoja de cálculo
         """
         self.token = token
         self.sheets = sheets
@@ -35,13 +43,19 @@ class TelegramBot:
         # Crear la aplicación
         self.application = ApplicationBuilder().token(self.token).build()
 
+        # Guardar referencia a SheetsOperations para usar en los manejadores
+        self.application.bot_data["sheets_operations"] = self.sheets
+
         # Registrar manejadores de comandos
         self.application.add_handler(CommandHandler("start", start_command))
         self.application.add_handler(CommandHandler("help", help_command))
         self.application.add_handler(CommandHandler("agregar", add_command))
 
-        # Guardar referencia a SheetsOperations para usar en los manejadores
-        self.application.bot_data["sheets_operations"] = self.sheets
+        # Manejador para callbacks de botones
+        self.application.add_handler(CallbackQueryHandler(button_callback))
+
+        # Manejador para capturar el monto cuando se está en proceso de una transacción
+        self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.UpdateType.MESSAGE, amount_handler))
 
         # Registrar manejador de errores
         self.application.add_error_handler(error_handler)
