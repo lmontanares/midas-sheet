@@ -56,6 +56,10 @@ expense_categories:
     - Hospedaje de Mascotas
     - Alquiler de Automóvil
 
+  FUTURO:
+    - Ahorros
+    - Inversiones
+
 # Categorías de ingresos (sin subcategorías)
 income_categories:
   - Salario / Sueldos
