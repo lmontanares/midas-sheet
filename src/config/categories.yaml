@@ -4,6 +4,7 @@
 # Categorías de gastos con estructura jerárquica (categorías y subcategorías)
 expense_categories:
   HOGAR:
+    - Supermercado
     - Hipoteca / Alquiler
     - Electricidad
     - Gas / Calefacción
