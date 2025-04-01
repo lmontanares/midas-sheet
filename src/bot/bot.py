@@ -6,13 +6,13 @@ from loguru import logger
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from ..sheets.operations import SheetsOperations
-from .commands import get_commands
 from .handlers import (
     add_command,
     amount_handler,
     button_callback,
     error_handler,
     help_command,
+    register_bot_commands,
     reload_command,
     start_command,
 )
@@ -61,9 +61,9 @@ class TelegramBot:
 
         # Registrar manejador de errores
         self.application.add_error_handler(error_handler)
-
-        # Establecer los comandos en el menú del bot
-        self.application.bot.set_my_commands(get_commands())
+        
+        # Añadir un post_init callback para registrar los comandos del bot de forma asíncrona
+        self.application.post_init = register_bot_commands
 
         logger.info("Bot configurado correctamente")
 
@@ -75,7 +75,7 @@ class TelegramBot:
             RuntimeError: Si el bot no ha sido configurado
         """
         if not self.application:
-            raise RuntimeError("El bot debe ser configurado antes de ejecutarse")
+            self.setup()
 
         logger.info("Iniciando bot...")
         self.application.run_polling()

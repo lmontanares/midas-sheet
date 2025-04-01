@@ -389,6 +389,24 @@ async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     del context.user_data["pending_transaction"]
 
 
+async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Registra los comandos del bot en Telegram.
+    Este manejador se ejecuta al inicio del bot.
+    
+    Args:
+        context: Contexto del manejador
+    """
+    from .commands import get_commands
+    
+    try:
+        # Establecer los comandos en el menú del bot
+        await context.bot.set_my_commands(get_commands())
+        logger.info("Comandos del bot registrados correctamente")
+    except Exception as e:
+        logger.error(f"Error al registrar comandos del bot: {e}")
+
+
 async def error_handler(update: Update | None, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Manejador global de errores.
