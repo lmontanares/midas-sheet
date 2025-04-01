@@ -52,7 +52,6 @@ class SheetsOperations:
         required_sheets = {
             "gastos": ["Fecha", "Usuario", "Categoría", "Subcategoría", "Monto", "Timestamp"],
             "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp"],
-            "General": [],
         }
 
         existing_sheets = [ws.title for ws in self.spreadsheet.worksheets()]

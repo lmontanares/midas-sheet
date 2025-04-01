@@ -107,14 +107,9 @@ def get_category_keyboard(expense_type: str = "gasto") -> InlineKeyboardMarkup:
             callback_data = f"category|{expense_type}|{category}"
             buttons.append([InlineKeyboardButton(category, callback_data=callback_data)])
     
-    # Añadir botones para seleccionar tipo (gasto/ingreso)
-    type_buttons = [
-        InlineKeyboardButton("GASTOS", callback_data="selector|gasto"),
-        InlineKeyboardButton("INGRESOS", callback_data="selector|ingreso")
-    ]
-    
-    # Añadir los botones de tipo al principio
-    buttons.insert(0, type_buttons)
+    # Añadir botón para volver al selector de tipo
+    back_button = [InlineKeyboardButton("⬅️ Cambiar tipo", callback_data="back_to_selector")]
+    buttons.append(back_button)
     
     return InlineKeyboardMarkup(buttons)
 
@@ -179,10 +174,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
 
+def get_type_selector_keyboard() -> InlineKeyboardMarkup:
+    """
+    Crea un teclado simple para seleccionar el tipo de transacción (gasto o ingreso).
+    
+    Returns:
+        Teclado de botones para Telegram
+    """
+    buttons = [
+        [InlineKeyboardButton("GASTOS", callback_data="selector|gasto"),
+         InlineKeyboardButton("INGRESOS", callback_data="selector|ingreso")]
+    ]
+    return InlineKeyboardMarkup(buttons)
+
+
 async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Manejador para el comando /agregar.
-    Muestra botones con categorías para seleccionar.
+    Muestra botones para elegir entre gasto o ingreso.
     
     Args:
         update: Objeto Update de Telegram
@@ -191,16 +200,16 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user = update.effective_user
     
     try:
-        # Crear y mostrar el teclado con las categorías
-        keyboard = get_category_keyboard()
+        # Mostrar primero un selector entre gasto e ingreso
+        keyboard = get_type_selector_keyboard()
         await update.message.reply_text(
-            "Selecciona una categoría para registrar un gasto:", 
+            "¿Qué tipo de transacción deseas registrar?", 
             reply_markup=keyboard
         )
     
     except Exception as e:
-        logger.error(f"Error al cargar las categorías: {e}")
-        await update.message.reply_text("❌ Error al cargar las categorías")
+        logger.error(f"Error al mostrar el selector de tipo: {e}")
+        await update.message.reply_text("❌ Error al iniciar el proceso de registro")
 
 
 async def register_transaction(
@@ -285,14 +294,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         expense_type = data[1]
         
         try:
-            # Verificar si ya estamos mostrando este tipo
-            current_message = query.message.text
-            if f"registrar un {expense_type}" in current_message.lower():
-                # Si es el mismo tipo, solo responder sin modificar el mensaje
-                await query.answer(f"Ya estás en modo {expense_type}")
-                return
-                
-            # Actualizar el mensaje con el nuevo teclado
+            # Actualizar el mensaje con el nuevo teclado de categorías según el tipo seleccionado
             keyboard = get_category_keyboard(expense_type)
             await query.edit_message_text(
                 f"Selecciona una categoría para registrar un {expense_type}:", 
@@ -386,6 +388,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             f"Por favor, envía el monto (solo números, ej: 123.45):",
             parse_mode="Markdown"
         )
+        
+        return
+    
+    # Si es volver al selector de tipo
+    elif action == "back_to_selector":
+        try:
+            # Mostrar selector de tipo nuevamente
+            keyboard = get_type_selector_keyboard()
+            await query.edit_message_text(
+                "¿Qué tipo de transacción deseas registrar?", 
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Error al volver al selector de tipo: {e}")
+            await query.edit_message_text("❌ Error al cargar el selector de tipo")
         
         return
     
