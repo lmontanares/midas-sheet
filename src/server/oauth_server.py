@@ -20,7 +20,7 @@ class OAuthServer:
     and passes them to a registered handler function.
     """
 
-    def __init__(self, host: str, port: int, callback_handler: OAuthCallbackHandler) -> None:
+    def __init__(self, host: str, port: int, callback_handler: OAuthCallbackHandler, redirect_uri: str | None) -> None:
         """
         Initializes the OAuth server.
 
@@ -28,8 +28,10 @@ class OAuthServer:
             host: Hostname or IP address to bind to.
             port: Port number to listen on.
             callback_handler: Function to call when the /oauth2callback is hit.
-                              It receives (state, code) and should return the user_id
-                              if successful, or None/raise Exception on failure.
+                             It receives (state, code) and should return the user_id
+                             if successful, or None/raise Exception on failure.
+            redirect_uri: The OAuth redirect URI to use. If None, it will be constructed
+                         based on host and port.
         """
         self.host = host
         self.port = port
@@ -37,6 +39,7 @@ class OAuthServer:
         self.app = Flask(__name__)
         self.server: Optional[make_server] = None
         self.server_thread: Optional[threading.Thread] = None
+        self.redirect_uri = redirect_uri
 
         # Check if redirect URI uses HTTPS if not localhost
         redirect_uri = self.get_redirect_uri()
@@ -154,15 +157,15 @@ class OAuthServer:
         return f"{scheme}://{self.host}:{self.port}"
 
     def get_redirect_uri(self) -> str:
-        """Gets the full redirect URI (e.g., http://localhost:8000/oauth2callback)."""
-        # This should ideally come from config to ensure consistency
-        # For now, construct it based on host/port
-        # WARNING: Assumes http, adjust if HTTPS is configured/required
+        """Gets the full redirect URI (e.g., http://localhost:8000/oauth2callback or https://example.ngrok.io/oauth2callback)."""
+        # Use the configured redirect URI if provided
+        if self.redirect_uri:
+            return self.redirect_uri
+
+        # Otherwise, construct it based on host/port (fallback behavior)
         scheme = "http"
         if self.port == 443:  # Basic heuristic
             scheme = "https"
-        # A more robust way would be to get the configured redirect URI directly
-        # return config.oauth_redirect_uri
         return f"{scheme}://{self.host}:{self.port}/oauth2callback"
 
     def open_browser(self, url: str) -> bool:

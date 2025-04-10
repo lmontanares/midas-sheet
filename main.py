@@ -136,6 +136,7 @@ def main() -> None:
             host=config.oauth_server_host,
             port=config.oauth_server_port,
             callback_handler=callback_with_context,
+            redirect_uri=config.oauth_redirect_uri,
         )
 
         # Iniciar el servidor OAuth en un hilo separado
