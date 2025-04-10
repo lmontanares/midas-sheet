@@ -1,4 +1,4 @@
-# Documento de Transferencia: Sistema de Gestión Financiera v3.0
+# Documento de Transferencia: Sistema de Gestión Financiera v3.1
 
 ## 1. Visión general del proyecto
 
@@ -12,7 +12,7 @@ El sistema consta de dos componentes principales que trabajan de forma integrada
 
 El usuario interactúa con el bot siguiendo un flujo específico para registrar transacciones:
 1. El usuario se autentica con su cuenta de Google usando OAuth 2.0 (`/auth`)
-2. Selecciona una de sus hojas de cálculo (`/list` y `/sheet`)
+2. Selecciona una de sus hojas de cálculo directamente con el comando (`/sheet`)
 3. Inicia el registro de transacción con el comando `/agregar`
 4. Elige tipo de transacción (ingreso o egreso)
 5. Selecciona una categoría
@@ -32,6 +32,7 @@ El usuario interactúa con el bot siguiendo un flujo específico para registrar 
 - Interfaz guiada mediante botones que simplifica la experiencia de usuario
 - Permite a cada usuario trabajar con sus propias hojas de cálculo gracias a OAuth 2.0
 - Protege la privacidad de los datos al no requerir compartir hojas con el bot
+- **Garantiza la seguridad de las credenciales mediante encriptación de tokens**
 
 ## 2. Ecosistema tecnológico
 
@@ -75,6 +76,10 @@ Todos los métodos y funciones públicas incluyen anotaciones de tipo completas,
   - google-auth-httplib2: Gestión de solicitudes HTTP autenticadas
 - **Servidor OAuth:**
   - Flask: Servidor web ligero para manejar redirecciones OAuth
+- **Seguridad:**
+  - **cryptography**: Para encriptación y desencriptación de tokens
+  - **hashlib**: Para el hashing de identificadores de usuario
+  - **secrets**: Para generación segura de tokens de estado
 - **Configuración y Datos:**
   - pyyaml: Para manejo de archivos de configuración YAML
 - **Utilidades:**
@@ -97,7 +102,7 @@ Todos los métodos y funciones públicas incluyen anotaciones de tipo completas,
 ## 3. Arquitectura y estructura
 
 ### Diagrama conceptual de la arquitectura
-La arquitectura sigue un patrón modular con separación clara de responsabilidades y autenticación OAuth:
+La arquitectura sigue un patrón modular con separación clara de responsabilidades, autenticación OAuth, y encriptación para seguridad:
 
 ```
                   ┌─────────────┐
@@ -111,9 +116,20 @@ Usuario (Telegram) → Bot de Telegram → Módulo OAuth → Módulo Google Shee
         ↑                   ↓               ↓                  ↓
         └───────────────────┴───────────────┴──────────────────┘
                    (Respuestas y visualizaciones)
+
+                         ┌─────────────┐
+                         │  Encriptación│
+                         │   (Fernet)   │◄────────────┐
+                         └──────┬──────┘             │
+                                │                    │
+                                ▼                    │
+                         ┌─────────────┐             │
+                         │   Tokens    │             │
+                         │  (Cifrados) │─────────────┘
+                         └─────────────┘
 ```
 
-El flujo de información comienza cuando el usuario envía comandos al bot a través de Telegram. El usuario primero se autentica mediante OAuth 2.0, lo que permite al bot acceder a sus propias hojas de cálculo de Google. El bot procesa estos comandos y, según sea necesario, interactúa con el módulo de Google Sheets para leer o escribir datos en las hojas del usuario. Finalmente, el bot envía respuestas al usuario basadas en el resultado de estas operaciones.
+El flujo de información comienza cuando el usuario envía comandos al bot a través de Telegram. El usuario primero se autentica mediante OAuth 2.0, lo que permite al bot acceder a sus propias hojas de cálculo de Google. **Los tokens generados en este proceso se encriptan utilizando Fernet (de la biblioteca cryptography) antes de almacenarse en disco**. El bot procesa los comandos y, según sea necesario, interactúa con el módulo de Google Sheets para leer o escribir datos en las hojas del usuario, desencriptando los tokens cuando se requieren. Finalmente, el bot envía respuestas al usuario basadas en el resultado de estas operaciones.
 
 ### Estructura de componentes/módulos
 ```
@@ -122,7 +138,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 ├── src/                  # Código fuente
 │   ├── auth/             # Autenticación OAuth 2.0
 │   │   ├── __init__.py   # Inicialización del módulo
-│   │   └── oauth.py      # Gestor de autenticación OAuth
+│   │   └── oauth.py      # Gestor de autenticación OAuth con encriptación
 │   │
 │   ├── bot/              # Lógica del bot de Telegram
 │   │   ├── __init__.py   # Inicialización del módulo
@@ -161,7 +177,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 │   ├── conftest.py       # Fixtures compartidos para pruebas
 │   └── README.md         # Documentación de pruebas
 │
-├── tokens/               # Directorio para tokens OAuth
+├── tokens/               # Directorio para tokens OAuth encriptados
 ├── docs/                 # Documentación del proyecto
 │   └── handover.md       # Documento de transferencia
 │
@@ -180,6 +196,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - **Patrón Gestor de Configuración**: Implementado con la clase `CategoryManager` que centraliza el acceso a las configuraciones de categorías
 - **Patrón Estado**: Implementado para el flujo de conversación usando el diccionario `user_data` con estados definidos para manejar la transición entre pasos del flujo
 - **Patrón Proxy/Delegación**: Implementado en `OAuthManager` para manejar la autenticación con Google
+- **Criptografía Aplicada**: Implementado en `OAuthManager` para encriptar y desencriptar tokens almacenados
 - **Propiedades (@property)**: Para el acceso controlado a la configuración (en `config.py` y `categories.py`)
 - **Inyección de dependencias**: Las clases reciben sus dependencias en el constructor (por ejemplo, `TelegramBot` recibe `SheetsOperations` y `OAuthManager`)
 - **Callback asíncronos**: Uso de `post_init` para registro de comandos del bot de forma asíncrona
@@ -197,10 +214,11 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
   - Gestión de tokens por usuario
   - Refresco automático de tokens expirados
   - Revocación de acceso
+  - **Encriptación completa de tokens almacenados**
+  - **Gestión segura de claves criptográficas**
 - **Nuevos comandos implementados:**
   - `/auth`: Inicia el proceso de autenticación OAuth
-  - `/list`: Lista las hojas de cálculo disponibles del usuario
-  - `/sheet`: Selecciona una hoja de cálculo específica
+  - `/sheet`: Selecciona una hoja de cálculo específica (incluye la funcionalidad de listar hojas disponibles)
   - `/logout`: Cierra sesión y revoca acceso
 - Manejadores para comandos `/start`, `/help`, `/agregar` y `/recargar`
 - Servidor web para manejar redirecciones OAuth implementado
@@ -235,6 +253,9 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 ### Progreso y logros hasta la fecha
 - Implementación completa del sistema de autenticación OAuth 2.0
 - Migración desde autenticación por cuenta de servicio a OAuth 2.0
+- **Implementación de encriptación de tokens mediante Fernet**
+- **Mejora del almacenamiento de tokens mediante hashing seguro de identificadores**
+- **Revocación de tokens implementada con limpieza de archivos locales**
 - Soporte para múltiples usuarios con acceso a sus propias hojas
 - Integración de un servidor web para manejar redirecciones OAuth
 - Implementación de flujo completo de autorización y selección de hojas
@@ -255,7 +276,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - Documentación de pruebas en tests/README.md
 - Estructura del proyecto bien organizada y documentada
 - Archivo YAML con documentación clara sobre las categorías
-- Documento de transferencia detallado actualizado con la implementación OAuth (este documento)
+- Documento de transferencia detallado actualizado con la implementación OAuth y encriptación (este documento)
 
 ## 5. Desafíos y consideraciones técnicas
 
@@ -269,7 +290,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - Potenciales errores en el manejo de comentarios cuando el estado de la conversación se pierde
 - El servidor OAuth requiere acceso a puertos en el servidor para redirecciones
 - En entornos de producción, se requiere un dominio público con HTTPS para las redirecciones OAuth
-- Los tokens OAuth se almacenan en archivos sin cifrado, lo que podría representar un riesgo de seguridad
+- **La clave de encriptación se almacena en la variable de entorno `OAUTH_ENCRYPTION_KEY`, lo que requiere protección adicional del archivo `.env`**
 
 ### Deuda técnica acumulada
 - La estructura para modelos y servicios está creada pero sin implementación completa
@@ -280,11 +301,15 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
   - Pruebas de integración completa del flujo OAuth
   - Pruebas para el manejo de tokens expirados
   - Pruebas para la comunicación entre servidor OAuth y bot
+- **Faltan pruebas para la nueva funcionalidad de encriptación:**
+  - **Pruebas de encriptación y desencriptación de tokens**
+  - **Pruebas de recuperación ante errores de desencriptación**
+  - **Pruebas de gestión de claves**
 - El manejo de cierre del servidor OAuth podría mejorarse para garantizar una terminación limpia
 - No hay verificación estática de tipos configurada en el flujo de CI/CD
 
 ### Optimizaciones pendientes
-- Implementar cifrado para los tokens almacenados
+- **Implementar rotación periódica de claves de encriptación**
 - Implementar expiración de sesiones para usuarios inactivos
 - Mejorar la gestión de errores específicos de OAuth
 - Implementar caching para reducir llamadas a la API de Google
@@ -300,26 +325,28 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 ## 6. Hoja de ruta
 
 ### Próximos pasos inmediatos
-1. Implementar cifrado para los tokens almacenados en disco
-2. Mejorar el manejo de errores específicos para OAuth
-3. Implementar comando para consultar transacciones recientes incluyendo comentarios
-4. Implementar comando para visualizar resúmenes (ej: gastos por categoría) por usuario
-5. Mejorar la validación de datos de entrada en todos los campos
-6. Añadir funcionalidad para editar o eliminar transacciones
-7. Implementar pruebas para las nuevas funcionalidades OAuth
-8. Configurar verificación estática de tipos con mypy
-9. Mejorar documentación de usuario final para el proceso de autenticación
+1. **Implementar rotación y gestión avanzada de claves criptográficas**
+2. **Implementar re-encriptación de tokens en caso de cambio de clave**
+3. **Mejorar el manejo de errores específicos para encriptación/desencriptación de tokens**
+4. Implementar comando para consultar transacciones recientes incluyendo comentarios
+5. Implementar comando para visualizar resúmenes (ej: gastos por categoría) por usuario
+6. Mejorar la validación de datos de entrada en todos los campos
+7. Añadir funcionalidad para editar o eliminar transacciones
+8. **Implementar pruebas para las nuevas funcionalidades de encriptación**
+9. Configurar verificación estática de tipos con mypy
+10. Mejorar documentación de usuario final para el proceso de autenticación
 
 ### Características planificadas a medio/largo plazo
-1. Implementar reportes y análisis financieros más avanzados por usuario
-2. Agregar funcionalidades de presupuestos y alertas
-3. Integrar gráficos y visualizaciones a través de Telegram
-4. Permitir exportación de datos en diferentes formatos
-5. Implementar análisis inteligente de patrones de gasto
-6. Permitir compartir hojas entre múltiples usuarios (colaboración)
-7. Búsquedas por texto en comentarios y filtrado de transacciones
-8. Implementar notificaciones programadas y recordatorios
-9. Añadir soporte para múltiples monedas y conversión automática
+1. **Sistema de almacenamiento más seguro para claves criptográficas (HSM o sistemas de gestión de secretos)**
+2. Implementar reportes y análisis financieros más avanzados por usuario
+3. Agregar funcionalidades de presupuestos y alertas
+4. Integrar gráficos y visualizaciones a través de Telegram
+5. Permitir exportación de datos en diferentes formatos
+6. Implementar análisis inteligente de patrones de gasto
+7. Permitir compartir hojas entre múltiples usuarios (colaboración)
+8. Búsquedas por texto en comentarios y filtrado de transacciones
+9. Implementar notificaciones programadas y recordatorios
+10. Añadir soporte para múltiples monedas y conversión automática
 
 ### Cronograma tentativo
 Información no disponible: No se ha establecido un cronograma formal para el desarrollo.
@@ -330,41 +357,46 @@ Información no disponible: No se ha establecido un cronograma formal para el de
 1. **Migración de service_account a OAuth 2.0**: Permite a cada usuario utilizar sus propias hojas, mejorando la privacidad y evitando la necesidad de compartir hojas con una cuenta de servicio.
 2. **Servidor Flask para redirecciones OAuth**: Proporciona una forma simple y eficiente de manejar el callback de redirección de OAuth, ejecutándose en un hilo separado para no bloquear el bot.
 3. **Gestor OAuth centralizado**: Encapsula toda la lógica de autenticación en una clase dedicada, facilitando la gestión de tokens y credenciales.
-4. **Almacenamiento de tokens por usuario**: Permite mantener múltiples sesiones de usuario simultáneas y persistentes entre reinicios del bot.
-5. **Uso de python-telegram-bot**: Proporciona una API moderna y asíncrona para interactuar con la API de Telegram.
-6. **Uso de gspread con OAuth**: Ofrece una interfaz sencilla para acceder a hojas específicas del usuario.
-7. **Estructura modular**: Facilita la extensión y mantenimiento del código, con clara separación de responsabilidades.
-8. **Sistema de tipado moderno (Python 3.9+)**: Mejora la legibilidad, documentación y verificación de código con menor sobrecarga visual.
-9. **Loguru para logging**: Proporciona una interfaz más amigable y potente que el módulo logging estándar.
-10. **Pytest y pytest-mock para pruebas**: Framework moderno con mejor soporte para fixtures y mocking que unittest.
-11. **Sistema de estados para conversación**: Permite un flujo robusto y recuperable, facilitando la gestión de la conversación por etapas.
-12. **Verificación preventiva de datos**: Validación de la existencia de datos antes de procesarlos para evitar errores por pérdida de estado.
+4. **Encriptación de tokens**: Utiliza Fernet (cryptography) para encriptar tokens en disco, mejorando significativamente la seguridad de las credenciales de usuario.
+5. **Hashing de identificadores de usuario**: Utiliza SHA-256 para generar nombres de archivo seguros para los tokens, evitando revelar información sensible en los nombres de archivo.
+6. **Uso de python-telegram-bot**: Proporciona una API moderna y asíncrona para interactuar con la API de Telegram.
+7. **Uso de gspread con OAuth**: Ofrece una interfaz sencilla para acceder a hojas específicas del usuario.
+8. **Estructura modular**: Facilita la extensión y mantenimiento del código, con clara separación de responsabilidades.
+9. **Sistema de tipado moderno (Python 3.9+)**: Mejora la legibilidad, documentación y verificación de código con menor sobrecarga visual.
+10. **Loguru para logging**: Proporciona una interfaz más amigable y potente que el módulo logging estándar.
+11. **Pytest y pytest-mock para pruebas**: Framework moderno con mejor soporte para fixtures y mocking que unittest.
+12. **Sistema de estados para conversación**: Permite un flujo robusto y recuperable, facilitando la gestión de la conversación por etapas.
+13. **Verificación preventiva de datos**: Validación de la existencia de datos antes de procesarlos para evitar errores por pérdida de estado.
 
 ### Compensaciones (trade-offs) técnicos realizados
-1. **Complejidad vs. Flexibilidad**: La implementación de OAuth 2.0 aumenta la complejidad del sistema, pero ofrece mayor flexibilidad y seguridad para los usuarios.
-2. **Servidor local vs. Servicio externo**: Se optó por implementar un servidor local para OAuth, lo que simplifica el desarrollo pero requiere consideraciones adicionales para producción.
-3. **Almacenamiento de tokens en archivos vs. Base de datos**: Se eligió almacenar tokens en archivos por simplicidad, sacrificando algunas características de seguridad y escalabilidad.
-4. **Telegram como interfaz principal**: Se optó por Telegram por su accesibilidad y simplicidad, aunque limita algunas opciones de UI avanzadas.
-5. **Google Sheets como base de datos**: Se eligió por su facilidad de uso y visualización, aunque no tiene las capacidades de un sistema de base de datos completo.
-6. **Pruebas con pytest-mock vs unittest.mock**: Se eligió pytest-mock por su mejor integración con pytest y sintaxis más limpia, aunque requiere una dependencia adicional.
-7. **Flujo guiado vs. entrada libre**: Se implementó un flujo guiado por pasos usando botones, lo que mejora la experiencia de usuario pero requiere más complejidad en el código.
-8. **Manejadores específicos vs. manejadores generales**: Se implementaron manejadores específicos para OAuth, lo que mejora la organización del código pero aumenta la complejidad de la estructura.
-9. **Robustez vs. rendimiento**: Se implementaron múltiples verificaciones y logging para garantizar la robustez, aceptando un ligero impacto en el rendimiento.
-10. **Tipado moderno vs. compatibilidad con versiones antiguas**: Se eligió el tipado moderno (Python 3.9+) por su claridad y concisión, sacrificando la compatibilidad con versiones anteriores de Python.
+1. **Complejidad vs. Flexibilidad**: La implementación de OAuth 2.0 y encriptación aumenta la complejidad del sistema, pero ofrece mayor flexibilidad y seguridad para los usuarios.
+2. **Rendimiento vs. Seguridad**: La encriptación/desencriptación añade una pequeña sobrecarga de procesamiento, pero mejora significativamente la seguridad.
+3. **Servidor local vs. Servicio externo**: Se optó por implementar un servidor local para OAuth, lo que simplifica el desarrollo pero requiere consideraciones adicionales para producción.
+4. **Clave de encriptación en variables de entorno vs. Sistema de gestión de secretos**: Se eligió usar variables de entorno por simplicidad, aunque un sistema dedicado de gestión de secretos sería más seguro.
+5. **Telegram como interfaz principal**: Se optó por Telegram por su accesibilidad y simplicidad, aunque limita algunas opciones de UI avanzadas.
+6. **Google Sheets como base de datos**: Se eligió por su facilidad de uso y visualización, aunque no tiene las capacidades de un sistema de base de datos completo.
+7. **Pruebas con pytest-mock vs unittest.mock**: Se eligió pytest-mock por su mejor integración con pytest y sintaxis más limpia, aunque requiere una dependencia adicional.
+8. **Flujo guiado vs. entrada libre**: Se implementó un flujo guiado por pasos usando botones, lo que mejora la experiencia de usuario pero requiere más complejidad en el código.
+9. **Manejadores específicos vs. manejadores generales**: Se implementaron manejadores específicos para OAuth, lo que mejora la organización del código pero aumenta la complejidad de la estructura.
+10. **Robustez vs. rendimiento**: Se implementaron múltiples verificaciones y logging para garantizar la robustez, aceptando un ligero impacto en el rendimiento.
+11. **Tipado moderno vs. compatibilidad con versiones antiguas**: Se eligió el tipado moderno (Python 3.9+) por su claridad y concisión, sacrificando la compatibilidad con versiones anteriores de Python.
 
 ### Lecciones aprendidas durante el desarrollo
 - La autenticación OAuth 2.0 requiere una cuidadosa planificación del flujo de usuario.
 - La comunicación entre un servidor web y un bot de Telegram requiere mecanismos de sincronización.
-- El manejo de tokens requiere consideraciones de seguridad importantes.
+- El manejo de tokens requiere consideraciones de seguridad importantes, incluyendo encriptación.
+- **La gestión de claves criptográficas es un aspecto crítico que requiere atención específica.**
+- **El uso de hash para nombres de archivo proporciona una capa adicional de seguridad.**
 - La gestión de estados de usuario es crucial para mantener la coherencia de la aplicación.
 - La correcta estructura y modularización desde el inicio facilita la extensión del proyecto.
 - La implementación de flujos interactivos con botones mejora significativamente la experiencia de usuario.
 - El registro detallado de eventos (logging) es indispensable para identificar problemas en producción.
 - La verificación de autenticación debe realizarse en cada punto donde se accede a recursos protegidos.
-- El manejo correcto de errores de autenticación mejora significativamente la experiencia de usuario.
+- **El manejo correcto de errores de autenticación y desencriptación mejora significativamente la experiencia de usuario.**
 - Cada usuario puede tener diferentes necesidades y estructuras de hojas de cálculo.
 - Las anotaciones de tipo modernas mejoran significativamente la documentación del código y reducen errores.
 - La consistencia en el estilo de tipado es importante para la mantenibilidad del código.
+- **La biblioteca cryptography proporciona herramientas poderosas y fáciles de usar para encriptación segura.**
 
 ## 8. Recursos adicionales
 
@@ -378,7 +410,8 @@ Información no disponible: No se han especificado contactos para este proyecto.
 El proyecto está configurado para ejecutarse en un entorno local de desarrollo. Para un entorno de producción, se recomienda:
 - Configurar un dominio público con HTTPS para las redirecciones OAuth
 - Registrar el dominio público en Google Cloud Platform
-- Implementar medidas de seguridad adicionales para los tokens almacenados
+- **Implementar un sistema seguro de gestión de claves criptográficas**
+- **Considerar el uso de servicios de gestión de secretos (HashiCorp Vault, AWS KMS, etc.)**
 - Configurar un sistema de monitoreo para el servidor OAuth y el bot
 
 Las pruebas se ejecutan utilizando pytest y pueden ser iniciadas con:
@@ -402,44 +435,42 @@ Se recomienda implementar verificación estática de tipos con:
    - Crear credenciales OAuth 2.0 para aplicación web
    - Añadir URI de redirección: `http://localhost:8000/oauth2callback`
    - Descargar el JSON de credenciales y guardarlo como `oauth_credentials.json`
-8. Ejecutar pruebas: `pytest` o `pytest --cov=src`
-9. Ejecutar la aplicación: `python main.py`
+8. **Generar una clave de encriptación Fernet:**
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+9. **Agregar la clave generada a `.env` como `OAUTH_ENCRYPTION_KEY`**
+10. Ejecutar pruebas: `pytest` o `pytest --cov=src`
+11. Ejecutar la aplicación: `python main.py`
 
 ## Cambios recientes importantes
 
-Las modificaciones más significativas en la última versión (v3.0) incluyen:
+Las modificaciones más significativas en la última versión (v3.1) incluyen:
 
-1. **Implementación completa de autenticación OAuth 2.0:**
-   - Reemplazo del sistema de autenticación basado en service_account
-   - Implementación del gestor de autenticación OAuth
-   - Creación de servidor para redirecciones OAuth
-   - Soporte para múltiples usuarios con sus propias hojas
+1. **Implementación de encriptación segura para tokens:**
+   - Uso de Fernet (cryptography) para encriptar/desencriptar tokens
+   - Almacenamiento seguro de tokens en disco
+   - Limpieza automática de tokens corrompidos
+   - Mejor protección de la privacidad de los usuarios
 
-2. **Nuevos comandos para gestión de hojas:**
-   - `/auth`: Iniciar proceso de autenticación
-   - `/list`: Listar hojas disponibles del usuario
-   - `/sheet`: Seleccionar hoja activa
-   - `/logout`: Cerrar sesión y revocar acceso
+2. **Mejoras en la gestión de identificadores de usuario:**
+   - Uso de hash SHA-256 para nombres de archivo de tokens
+   - Prevención de exposición de IDs en nombres de archivo
+   - Generación de nombres de archivo seguros y consistentes
 
-3. **Mejoras en la estructura del proyecto:**
-   - Nuevo módulo `auth` para autenticación OAuth
-   - Nuevo módulo `server` para servidor de redirecciones
-   - Reorganización de manejadores en submódulo `handlers`
+3. **Implementación de revocación de tokens:**
+   - Soporte para revocar tokens con la API de Google
+   - Limpieza automática de tokens locales al revocar acceso
+   - Manejo mejorado de errores durante la revocación
 
-4. **Mejoras en la gestión de usuarios:**
-   - Soporte para múltiples usuarios simultáneos
-   - Almacenamiento y gestión de tokens por usuario
-   - Verificación de autenticación en operaciones críticas
+4. **Gestión de claves de encriptación:**
+   - Soporte para claves Fernet configurables mediante variables de entorno
+   - Documentación de generación de claves seguras
+   - Manejo adecuado de errores de encriptación/desencriptación
 
-5. **Actualizaciones en la configuración:**
-   - Nuevas variables de entorno para OAuth
-   - Soporte para configuración de servidor de redirección
-   - Actualización de documentación y ejemplos
+5. **Mejoras en el manejo de errores:**
+   - Detección y limpieza automática de tokens corruptos
+   - Mejor recuperación ante fallos de autenticación
+   - Mensajes de error más claros y específicos
 
-6. **Sistema de tipado mejorado:**
-   - Adopción completa de características de tipado de Python 3.9+
-   - Uso de operador de unión `|` para tipos múltiples
-   - Simplificación del código usando tipos integrados directamente
-   - Documentación detallada del enfoque de tipado
-
-Estas modificaciones transforman significativamente el sistema, convirtiéndolo en una solución multi-usuario donde cada persona puede interactuar con sus propias hojas de cálculo, mejorando la privacidad y flexibilidad del servicio, además de mejorar la calidad del código a través de un sistema de tipado moderno y consistente.
+Estas modificaciones aumentan significativamente la seguridad del sistema al proteger adecuadamente los tokens de acceso de los usuarios, evitando posibles fugas de información sensible y proporcionando un método seguro para la revocación de accesos.
