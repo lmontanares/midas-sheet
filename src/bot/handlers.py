@@ -108,7 +108,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     /start - Inicia el bot
     /help - Muestra este mensaje de ayuda
     /auth - Autoriza acceso a tus hojas de Google
-    # Removed /list command from help text
+
     /sheet <ID> - Selecciona una hoja de cálculo específica
     /agregar - Muestra las categorías disponibles para registrar una transacción
     /recargar - Recarga las categorías desde el archivo de configuración

@@ -3,12 +3,10 @@ Configuración principal del bot de Telegram.
 """
 
 from loguru import logger
-from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from ..auth.oauth import OAuthManager
 from ..sheets.client import GoogleSheetsClient  # Added for type hint or access
-
-# Removed OAuthServer import
 from ..sheets.operations import SheetsOperations
 from .handlers import (
     add_command,
@@ -45,7 +43,7 @@ class TelegramBot:
         self.token = token
         self.sheets = sheets
         self.oauth_manager = oauth_manager
-        # self.oauth_server = oauth_server # Removed
+
         self.application: Application | None = None
 
     def setup(self, existing_application: Application) -> None:
@@ -62,7 +60,7 @@ class TelegramBot:
         # (Puede ser redundante si main.py ya las añadió, pero es seguro)
         self.application.bot_data["sheets_operations"] = self.sheets
         self.application.bot_data["oauth_manager"] = self.oauth_manager
-        # self.application.bot_data["oauth_server"] = self.oauth_server # Removed
+
         # Añadir sheets_client si es necesario para otros handlers
         if isinstance(self.sheets.client, GoogleSheetsClient):
             self.application.bot_data["sheets_client"] = self.sheets.client
@@ -84,13 +82,6 @@ class TelegramBot:
         self.application.add_handler(CallbackQueryHandler(button_callback))
 
         # Implementamos un sistema de estados mediante user_data para manejar la conversación
-        # Primero registramos el manejador para los códigos de autorización (prioridad más alta)
-        # TODO: Revisar si code_handler sigue siendo necesario o si fue deprecado
-        # Comentado por ahora, ya que el flujo OAuth usa el servidor web
-        # self.application.add_handler(
-        #     MessageHandler(filters.TEXT & ~filters.COMMAND & filters.UpdateType.MESSAGE, code_handler, block=True),
-        #     group=0,
-        # )
 
         # Luego registramos el manejador para los comentarios
         self.application.add_handler(

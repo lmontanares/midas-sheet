@@ -4,7 +4,6 @@ Punto de entrada principal de la aplicación de finanzas.
 Este script inicia tanto el bot de Telegram como la conexión con Google Sheets.
 """
 
-import asyncio
 import functools
 from pathlib import Path
 from typing import Optional
@@ -13,7 +12,7 @@ from loguru import logger
 from telegram.ext import ApplicationBuilder, ContextTypes
 
 from src.auth.oauth import OAuthManager
-from src.bot.auth_handlers import _send_auth_success_message  # Import the message sender
+from src.bot.auth_handlers import _send_auth_success_message
 from src.bot.bot import TelegramBot
 from src.server.oauth_server import OAuthServer
 from src.sheets.client import GoogleSheetsClient
@@ -22,7 +21,6 @@ from src.utils.config import Config
 from src.utils.logger import setup_logging
 
 
-# Define the wrapper callback function in main.py scope
 def main_oauth_callback_handler(
     state: str, code: str, oauth_manager: OAuthManager, sheets_client: GoogleSheetsClient, job_queue: ContextTypes.DEFAULT_TYPE.job_queue
 ) -> Optional[str]:
@@ -104,9 +102,7 @@ def main() -> None:
         tokens_dir = Path(config.oauth_tokens_dir)
         tokens_dir.mkdir(exist_ok=True, parents=True)
 
-        # --- Initialization Order Change ---
-
-        # 1. Initialize OAuth Manager (needed for callback and client)
+        # 1. Initialize OAuth Manager
         oauth_manager = OAuthManager(
             client_secrets_file=config.oauth_credentials_path,
             token_dir=config.oauth_tokens_dir,
@@ -115,18 +111,17 @@ def main() -> None:
         )
         logger.info("Gestor OAuth inicializado")
 
-        # 2. Initialize Sheets Client (needed for callback)
+        # 2. Initialize Sheets Client
         sheets_client = GoogleSheetsClient(oauth_manager)
         logger.info("Cliente Google Sheets inicializado")
 
-        # 3. Initialize Telegram Application (needed for Job Queue in callback)
+        # 3. Initialize Telegram Application
         application = ApplicationBuilder().token(config.telegram_token).build()
         logger.info("Telegram Application creada")
 
-        # Add necessary components to bot_data early
+        # Add necessary components to bot_data
         application.bot_data["oauth_manager"] = oauth_manager
         application.bot_data["sheets_client"] = sheets_client
-        # sheets_operations will be added later by TelegramBot.setup
 
         # 4. Create the partial callback function
         callback_with_context = functools.partial(
@@ -140,30 +135,25 @@ def main() -> None:
         oauth_server = OAuthServer(
             host=config.oauth_server_host,
             port=config.oauth_server_port,
-            callback_handler=callback_with_context,  # Pass the prepared callback
+            callback_handler=callback_with_context,
         )
 
         # Iniciar el servidor OAuth en un hilo separado
         oauth_server.start()
         logger.info(f"Servidor OAuth iniciado en {config.oauth_server_host}:{config.oauth_server_port}")
 
-        # (OAuth Manager initialization moved up)
-
-        # (Sheets Client initialization moved up)
-
-        # Inicializar operaciones de hojas de cálculo
         # 6. Initialize Sheets Operations
         sheets_operations = SheetsOperations(sheets_client)
         logger.info("Operaciones de hojas de cálculo inicializadas")
 
-        # 7. Initialize Telegram Bot (without oauth_server)
+        # 7. Initialize Telegram Bot
         bot = TelegramBot(config.telegram_token, sheets_operations, oauth_manager)
 
-        # Add sheets_operations to bot_data (can also be done in bot.setup)
+        # Add sheets_operations to bot_data
         application.bot_data["sheets_operations"] = sheets_operations
 
         # 8. Setup and run the bot using the existing application
-        bot.setup(existing_application=application)  # Pass the application
+        bot.setup(existing_application=application)
         logger.info("Bot de Telegram configurado, iniciando...")
         bot.run()  # This blocks until termination
 

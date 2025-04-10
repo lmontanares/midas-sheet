@@ -1,5 +1,4 @@
 import threading
-from typing import Any, Dict, List, Optional
 
 import gspread
 from google.auth.exceptions import GoogleAuthError  # More specific auth errors
@@ -27,10 +26,10 @@ class GoogleSheetsClient:
             oauth_manager: The configured OAuthManager instance.
         """
         self.oauth_manager = oauth_manager
-        self.client_cache: Dict[str, gspread.Client] = {}
+        self.client_cache: dict[str, gspread.Client] = {}
         self._cache_lock = threading.Lock()  # Lock for thread-safe cache access
 
-    def _get_client(self, user_id: str) -> Optional[gspread.Client]:
+    def _get_client(self, user_id: str) -> gspread.Client | None:
         """
         Gets an authenticated gspread client for the user, from cache or by authenticating.
 
@@ -88,7 +87,7 @@ class GoogleSheetsClient:
                 del self.client_cache[user_id]
                 logger.debug(f"Cleared gspread client cache for user {user_id}")
 
-    def open_spreadsheet(self, user_id: str, spreadsheet_id: str) -> Optional[gspread.Spreadsheet]:
+    def open_spreadsheet(self, user_id: str, spreadsheet_id: str) -> gspread.Spreadsheet | None:
         """
         Opens a spreadsheet by its ID for a specific user.
 
@@ -124,34 +123,6 @@ class GoogleSheetsClient:
             if "PERMISSION_DENIED" in str(e):
                 logger.warning(f"Permission denied for spreadsheet {spreadsheet_id}, user {user_id}.")
                 # Consider raising a custom PermissionError?
-            raise  # Re-raise APIError
-        # GoogleAuthError and other exceptions are raised by _get_client
-
-    def list_spreadsheets(self, user_id: str) -> List[Dict[str, Any]]:
-        """
-        Lists spreadsheets accessible to the user.
-
-        Args:
-            user_id: Unique ID of the user.
-
-        Returns:
-            A list of spreadsheet metadata dictionaries, or an empty list on failure.
-
-        Raises:
-            GoogleAuthError: If authentication fails.
-            APIError: For Google API errors during listing.
-            Exception: For other unexpected errors.
-        """
-        try:
-            client = self._get_client(user_id)
-            if not client:
-                return []  # Return empty list on auth failure
-
-            files = client.list_spreadsheet_files()
-            logger.info(f"Listed {len(files)} spreadsheets for user {user_id}")
-            return files
-        except APIError as e:
-            logger.error(f"API error listing spreadsheets for user {user_id}: {e}")
             raise  # Re-raise APIError
         # GoogleAuthError and other exceptions are raised by _get_client
 

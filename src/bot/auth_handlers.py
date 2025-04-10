@@ -1,20 +1,9 @@
-# src/bot/auth_handlers.py (Revised)
-
-import asyncio  # For scheduling message sending
-from functools import partial  # Needed if passing context to callback handler externally
-from typing import Optional  # Added Optional for type hint
-
-from google.auth.exceptions import GoogleAuthError  # Import specific exceptions
-from gspread.exceptions import APIError, SpreadsheetNotFound  # Import specific exceptions
+from google.auth.exceptions import GoogleAuthError
+from gspread.exceptions import APIError, SpreadsheetNotFound
 from loguru import logger
 from telegram import Update
-from telegram.constants import ParseMode  # Explicit import
-from telegram.ext import ContextTypes, JobQueue  # Added JobQueue potentially
-
-# Assuming these types are available via imports in the actual context
-# from ..auth.oauth import OAuthManager
-# from ..sheets.operations import SheetsOperations
-# from ..sheets.client import GoogleSheetsClient
+from telegram.constants import ParseMode
+from telegram.ext import ContextTypes
 
 # --- Command Handlers ---
 
@@ -69,8 +58,6 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
 
 
-# Removed code_handler - manual code pasting is deprecated
-# Removed list_command function
 async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handles the /sheet command to select an active spreadsheet."""
     if not update.effective_user or not update.message:
@@ -189,7 +176,6 @@ async def logout_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if "active_spreadsheet_title" in context.user_data:
             del context.user_data["active_spreadsheet_title"]
             cleared_keys.append("active_spreadsheet_title")
-        # Removed context.user_data["oauth"] cleanup
         if cleared_keys:
             logger.debug(f"Cleared keys from user_data for {user_id}: {cleared_keys}")
 
@@ -237,7 +223,6 @@ async def _send_auth_success_message(context: ContextTypes.DEFAULT_TYPE) -> None
             text="✅ *Autorización Exitosa*\n\n"
             "Has conectado tu cuenta de Google Sheets correctamente.\n\n"
             "Ahora puedes:\n"
-            # Removed reference to /list
             "• Usar /sheet <ID> para seleccionar una hoja.\n"
             "• Usar /agregar para registrar transacciones.",
             parse_mode=ParseMode.MARKDOWN,
@@ -245,87 +230,3 @@ async def _send_auth_success_message(context: ContextTypes.DEFAULT_TYPE) -> None
     except Exception as e:
         # Catch specific Telegram errors if needed (e.g., BadRequest if user blocked bot)
         logger.error(f"Failed to send auth success message to user {user_id}: {e}")
-
-
-def oauth_callback_handler(state: str, code: str, context: ContextTypes.DEFAULT_TYPE) -> Optional[str]:
-    """
-    Handles the callback from the OAuth server. Exchanges code for token.
-    This function is passed to OAuthServer during initialization.
-
-    Args:
-        state: The state parameter from the callback URL.
-        code: The authorization code from the callback URL.
-        context: The bot's application context (passed via functools.partial or similar).
-
-    Returns:
-        user_id if successful, None otherwise (signals failure to the server).
-
-    Raises:
-        ValueError: If state is invalid (propagated from OAuthManager).
-        Exception: For other unexpected errors during exchange or client auth.
-                   These will be caught by the server's route handler.
-    """
-    oauth_manager = context.bot_data.get("oauth_manager")
-    sheets_client = context.bot_data.get("sheets_client")  # Get client if stored directly
-    job_queue = context.application.job_queue
-
-    if not oauth_manager:
-        logger.critical("CRITICAL: OAuthManager not available in oauth_callback_handler. Cannot process callback.")
-        # Returning None signals failure, server shows generic error.
-        # Cannot raise here easily without context of what server expects.
-        return None
-
-    logger.info(f"OAuth callback received. Processing state: {state[:10]}...")
-    # Exceptions are handled by the server route that calls this handler
-
-    # Exchange code, get user_id if successful. Raises ValueError on invalid state.
-    user_id = oauth_manager.exchange_code(state, code)  # Can raise exceptions
-
-    if user_id:
-        logger.info(f"Code exchanged successfully via callback for user {user_id}")
-
-        # Immediately try to authenticate the gspread client to cache it
-        if sheets_client:
-            try:
-                # _get_client handles fetching credentials and authorizing gspread
-                client_instance = sheets_client._get_client(user_id)  # Can raise exceptions
-                if client_instance:
-                    logger.info(f"gspread client authenticated and cached via callback for user {user_id}")
-                else:
-                    # This implies get_credentials failed after successful exchange_code
-                    logger.error(f"Failed to get gspread client for user {user_id} immediately after token exchange (get_credentials likely failed).")
-                    # Still schedule success message, but log error. User might need /auth again later.
-            except Exception as e:
-                # Log error but don't block the success message scheduling
-                logger.exception(f"Error authenticating sheets_client for user {user_id} immediately after callback: {e}")
-
-        # Schedule sending the success message back to the user via JobQueue
-        if job_queue:
-            job_queue.run_once(
-                _send_auth_success_message,
-                when=1,  # Run 1 second later
-                data={"user_id": user_id},
-                name=f"auth_success_{user_id}",  # Unique job name
-            )
-            logger.debug(f"Scheduled auth success message job for user {user_id}")
-        else:
-            logger.error("JobQueue not available in context. Cannot schedule success message for user {user_id}.")
-            # Consider alternative notification? Difficult without job queue.
-
-        return user_id  # Signal success to the OAuthServer
-
-    else:
-        # Should not happen if exchange_code raises exceptions on failure
-        logger.error(f"oauth_manager.exchange_code returned None unexpectedly for state {state}.")
-        return None  # Signal failure
-
-    # ValueError (invalid state) and other exceptions from exchange_code or _get_client
-    # will propagate up to the server's route handler, which will log them
-    # and return an error page. No need to catch them explicitly here unless
-    # we want to perform specific cleanup *before* the server handles it.
-    # except ValueError as ve:
-    #     logger.error(f"OAuth state validation failed during callback: {ve}. State: {state}")
-    #     raise # Re-raise for the server
-    # except Exception as e:
-    #     logger.exception(f"Unhandled error processing OAuth callback (state: {state}): {e}")
-    #     raise # Re-raise for the server
