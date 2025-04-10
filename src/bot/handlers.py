@@ -12,6 +12,9 @@ from telegram.ext import ContextTypes
 from src.config.categories import category_manager
 from src.sheets.operations import SheetsOperations
 
+# Importar manejadores de autenticación
+from .auth_handlers import auth_command, logout_command, sheet_command
+
 
 def get_category_keyboard(expense_type: str = "gasto") -> InlineKeyboardMarkup:
     """
@@ -85,7 +88,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         context: Contexto del manejador
     """
     user = update.effective_user
-    await update.message.reply_text(f"¡Hola {user.first_name}! Soy el bot de gestión financiera.")
+    await update.message.reply_text(
+        f"¡Hola {user.first_name}! Soy el bot de gestión financiera.\n\n"
+        f"Para comenzar, necesitas autorizar el acceso a tus hojas de cálculo de Google.\n"
+        f"Usa el comando /auth para iniciar el proceso de autorización."
+    )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -100,10 +107,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     *Comandos disponibles:*
     /start - Inicia el bot
     /help - Muestra este mensaje de ayuda
-    /agregar - Muestra las categorías disponibles como botones para registrar una transacción
+    /auth - Autoriza acceso a tus hojas de Google
+    # Removed /list command from help text
+    /sheet <ID> - Selecciona una hoja de cálculo específica
+    /agregar - Muestra las categorías disponibles para registrar una transacción
     /recargar - Recarga las categorías desde el archivo de configuración
-
-    Pronto se agregarán más funciones...
+    /logout - Cierra sesión y revoca acceso
     """
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
@@ -129,6 +138,21 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         context: Contexto del manejador
     """
     user = update.effective_user
+    user_id = str(user.id)
+
+    # Verificar si el usuario está autenticado y tiene una hoja activa
+    oauth_manager = context.bot_data.get("oauth_manager")
+
+    if not oauth_manager or not oauth_manager.is_authenticated(user_id):
+        await update.message.reply_text(
+            "⚠️ Debes autenticarte primero antes de registrar transacciones.\n\nUsa /auth para iniciar el proceso de autorización."
+        )
+        return
+
+    # Verificar si el usuario tiene una hoja activa
+    if not context.user_data.get("active_spreadsheet_id"):
+        await update.message.reply_text("⚠️ Debes seleccionar una hoja de cálculo primero.\n\nUsa /sheet <ID> para seleccionar una.")
+        return
 
     try:
         # Mostrar primero un selector entre gasto e ingreso
@@ -188,14 +212,22 @@ async def register_transaction(
         category: Categoría principal de la transacción
         subcategory: Subcategoría de la transacción
         date: Fecha de la transacción en formato YYYY-MM-DD
+        comment: Comentario opcional de la transacción
     """
     user = update.effective_user
+    user_id = str(user.id)
     sheets_ops: SheetsOperations = context.bot_data.get("sheets_operations")
 
     # Obtener la hoja de cálculo adecuada según el tipo de transacción
     sheet_name = "gastos" if expense_type == "gasto" else "ingresos"
 
     try:
+        # Verificar si hay una hoja activa
+        active_spreadsheet_id = context.user_data.get("active_spreadsheet_id")
+        if not active_spreadsheet_id:
+            await update.effective_message.reply_text("❌ Error: No hay una hoja de cálculo activa. Por favor, usa /sheet <ID> para seleccionar una.")
+            return
+
         # Preparar la fila para añadir
         row_data = [
             date,  # Fecha
@@ -208,7 +240,7 @@ async def register_transaction(
         ]
 
         # Añadir la fila a la hoja correspondiente
-        sheets_ops.append_row(sheet_name, row_data)
+        sheets_ops.append_row(user_id, sheet_name, row_data)
 
         # Enviar confirmación al usuario
         sign = "-" if expense_type == "gasto" else "+"
@@ -246,12 +278,33 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     await query.answer()
 
+    user_id = str(update.effective_user.id)
+
+    # Verificar autenticación antes de procesar callbacks
+    oauth_manager = context.bot_data.get("oauth_manager")
+    if not oauth_manager or not oauth_manager.is_authenticated(user_id):
+        # No interrumpir flujo para botones que no requieren autenticación
+        # pero sí validar cuando sea un flujo de transacción
+        pass
+
+    # Verificar si hay una hoja activa (excepto para comandos básicos)
+    active_spreadsheet_id = context.user_data.get("active_spreadsheet_id")
+
     # Obtener los datos del callback
     data = query.data.split("|")
     action = data[0]
 
     # Si es un selector de tipo (gasto/ingreso)
     if action == "selector":
+        # Verificar autenticación y hoja activa para flujos de transacción
+        if not oauth_manager or not oauth_manager.is_authenticated(user_id):
+            await query.edit_message_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
+            return
+
+        if not active_spreadsheet_id:
+            await query.edit_message_text("⚠️ Debes seleccionar una hoja de cálculo primero.\n\nUsa /sheet <ID> para seleccionar una.")
+            return
+
         expense_type = data[1]
 
         try:
@@ -365,18 +418,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     # Si es una respuesta a la pregunta sobre agregar comentario
     elif action == "comment":
         option = data[1]  # "yes" o "no"
-        
+
         # Verificamos que exista una transacción pendiente
         if "pending_transaction" not in context.user_data:
             logger.warning(f"Se intentó agregar comentario pero no hay transacción pendiente. User: {update.effective_user.id}")
-            await query.edit_message_text(
-                "❌ Error: La transacción ha expirado. Por favor, usa /agregar para iniciar una nueva transacción."
-            )
+            await query.edit_message_text("❌ Error: La transacción ha expirado. Por favor, usa /agregar para iniciar una nueva transacción.")
             return
-        
+
         # Agregamos logging para depuración
         logger.info(f"Manejo de botón de comentario. Opción: {option}. User: {update.effective_user.id}")
-        if option == "yes":            
+        if option == "yes":
             # El usuario quiere agregar un comentario
             context.user_data["state"] = "waiting_comment"
             # Extraer datos de la transacción para el mensaje
@@ -433,10 +484,10 @@ async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     # Logging para depuración
     logger.info(f"Procesando monto para transacción. User: {update.effective_user.id}")
-    
+
     try:
         amount_text = update.message.text.strip()
-        
+
         # Validar que sea un número
         try:
             amount = float(amount_text)
@@ -449,36 +500,33 @@ async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         # Guardar el monto en la transacción pendiente
         context.user_data["pending_transaction"]["amount"] = amount
-        
+
         # Cambiar el estado a "confirm_comment"
         context.user_data["state"] = "confirm_comment"
-        
+
         # Preparar la información de la transacción para mostrar
         transaction = context.user_data["pending_transaction"]
         expense_type = transaction["expense_type"]
         category = transaction["category"]
-        
+
         # Para ingresos, donde la categoría y subcategoría son iguales, ajustar el mensaje
         if expense_type == "ingreso":
             category_display = category
         else:
             subcategory = transaction["subcategory"]
             category_display = f"{category} - {subcategory}"
-        
+
         # Crear botones para confirmar si desea agregar un comentario
-        keyboard = [
-            [InlineKeyboardButton("✅ Sí", callback_data="comment|yes"),
-             InlineKeyboardButton("❌ No", callback_data="comment|no")]
-        ]
+        keyboard = [[InlineKeyboardButton("✅ Sí", callback_data="comment|yes"), InlineKeyboardButton("❌ No", callback_data="comment|no")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
+
         await update.message.reply_text(
             f"Has seleccionado *{category_display}* como {expense_type} con monto *{amount:.2f}*.\n\n"
             f"¿Deseas agregar un comentario a esta transacción?",
             reply_markup=reply_markup,
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
-    
+
     except Exception as e:
         # Si ocurre cualquier error, informar al usuario y registrar en el log
         logger.error(f"Error al procesar monto: {e}")
@@ -497,18 +545,18 @@ async def comment_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if "pending_transaction" not in context.user_data or context.user_data.get("state") != "waiting_comment":
         # Si no estamos esperando un comentario, ignoramos este mensaje (lo manejará otro handler)
         return
-    
+
     # Agregamos logging para depuración
     logger.info(f"Procesando comentario para transacción. User: {update.effective_user.id}")
-    
+
     try:
         # Obtener el comentario ingresado
         comment_text = update.message.text.strip()
-        
+
         # Si el usuario escribe "sin comentario", guardar como cadena vacía
         if comment_text.lower() == "sin comentario":
             comment_text = ""
-        
+
         # Obtener datos completos de la transacción pendiente
         transaction = context.user_data["pending_transaction"]
         expense_type = transaction["expense_type"]
@@ -516,15 +564,15 @@ async def comment_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         subcategory = transaction["subcategory"]
         date = transaction["date"]
         amount = transaction["amount"]
-        
+
         # Registrar la transacción con el comentario
         await register_transaction(update, context, expense_type, amount, category, subcategory, date, comment_text)
-        
+
         # Limpiar datos temporales
         del context.user_data["pending_transaction"]
         if "state" in context.user_data:
             del context.user_data["state"]
-    
+
     except Exception as e:
         # Si ocurre cualquier error, informar al usuario y registrar en el log
         logger.error(f"Error al procesar comentario: {e}")

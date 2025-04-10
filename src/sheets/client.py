@@ -1,70 +1,173 @@
-"""
-Cliente para interactuar con Google Sheets usando gspread.
-"""
-
-from typing import Any
+import threading
+from typing import Any, Dict, List, Optional
 
 import gspread
-from google.oauth2.service_account import Credentials
+from google.auth.exceptions import GoogleAuthError  # More specific auth errors
+from gspread.exceptions import APIError, SpreadsheetNotFound
 from loguru import logger
+
+from ..auth.oauth import OAuthManager
 
 
 class GoogleSheetsClient:
     """
-    Cliente para interactuar con Google Sheets usando gspread.
+    Client for interacting with Google Sheets using gspread and secure OAuth 2.0.
 
-    Maneja la autenticación y proporciona métodos para interactuar con hojas de cálculo.
+    Handles authentication and provides methods for spreadsheet operations.
+    Includes basic thread-safety for the client cache.
     """
 
-    SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    # SCOPES defined in OAuthManager, no need to repeat here unless different
 
-    def __init__(self, credentials_file: str) -> None:
+    def __init__(self, oauth_manager: OAuthManager) -> None:
         """
-        Inicializa el cliente de Google Sheets.
+        Initializes the Google Sheets client.
 
         Args:
-            credentials_file: Ruta al archivo de credenciales JSON
+            oauth_manager: The configured OAuthManager instance.
         """
-        self.credentials_file = credentials_file
-        self.client = None
+        self.oauth_manager = oauth_manager
+        self.client_cache: Dict[str, gspread.Client] = {}
+        self._cache_lock = threading.Lock()  # Lock for thread-safe cache access
 
-    def authenticate(self) -> None:
+    def _get_client(self, user_id: str) -> Optional[gspread.Client]:
         """
-        Autentica con Google Sheets usando gspread.
-
-        Raises:
-            FileNotFoundError: Si no se encuentra el archivo de credenciales
-            Exception: Si falla la autenticación
-        """
-        try:
-            credentials = Credentials.from_service_account_file(self.credentials_file, scopes=self.SCOPES)
-            self.client = gspread.authorize(credentials)
-            logger.info("Autenticación exitosa con Google Sheets")
-        except FileNotFoundError:
-            logger.error(f"No se encontró el archivo de credenciales: {self.credentials_file}")
-            raise
-        except Exception as e:
-            logger.error(f"Error al autenticar con Google Sheets: {e}")
-            raise
-
-    def open_spreadsheet(self, spreadsheet_id: str) -> Any:
-        """
-        Abre una hoja de cálculo por su ID.
+        Gets an authenticated gspread client for the user, from cache or by authenticating.
 
         Args:
-            spreadsheet_id: ID de la hoja de cálculo
+            user_id: Unique ID of the user.
 
         Returns:
-            Objeto Spreadsheet de gspread
+            An authenticated gspread.Client or None if authentication fails.
 
         Raises:
-            RuntimeError: Si no se ha autenticado previamente
+            GoogleAuthError: If authentication fails during credential retrieval/refresh.
+            APIError: If gspread authorization fails.
+            Exception: For other unexpected errors.
         """
-        if not self.client:
-            raise RuntimeError("Debes autenticar antes de realizar operaciones")
+        with self._cache_lock:
+            if user_id in self.client_cache:
+                # TODO: Optionally check if the cached client's credentials are still valid?
+                # gspread doesn't expose this easily. Assume valid if cached for now.
+                return self.client_cache[user_id]
 
+        # Not in cache, attempt authentication
         try:
-            return self.client.open_by_key(spreadsheet_id)
+            credentials = self.oauth_manager.get_credentials(user_id)
+            if not credentials:
+                logger.warning(f"Authentication failed: No valid credentials for user {user_id}")
+                return None
+
+            # Authorize with gspread
+            client = gspread.authorize(credentials)
+
+            # Store in cache
+            with self._cache_lock:
+                self.client_cache[user_id] = client
+
+            logger.info(f"Successfully authenticated and cached gspread client for user {user_id}")
+            return client
+
+        except GoogleAuthError as e:
+            logger.error(f"Google authentication error for user {user_id}: {e}")
+            self._clear_cache(user_id)  # Clear cache on auth error
+            raise  # Re-raise the specific auth error
+        except APIError as e:
+            logger.error(f"gspread API error during authorization for user {user_id}: {e}")
+            self._clear_cache(user_id)
+            raise  # Re-raise gspread API error
         except Exception as e:
-            logger.error(f"Error al abrir la hoja de cálculo: {e}")
-            raise
+            logger.exception(f"Unexpected error during authentication for user {user_id}: {e}")
+            self._clear_cache(user_id)
+            raise  # Re-raise unexpected errors
+
+    def _clear_cache(self, user_id: str) -> None:
+        """Removes a user's client from the cache."""
+        with self._cache_lock:
+            if user_id in self.client_cache:
+                del self.client_cache[user_id]
+                logger.debug(f"Cleared gspread client cache for user {user_id}")
+
+    def open_spreadsheet(self, user_id: str, spreadsheet_id: str) -> Optional[gspread.Spreadsheet]:
+        """
+        Opens a spreadsheet by its ID for a specific user.
+
+        Args:
+            user_id: Unique ID of the user.
+            spreadsheet_id: The ID of the spreadsheet to open.
+
+        Returns:
+            gspread.Spreadsheet object or None if not found or auth fails.
+
+        Raises:
+            GoogleAuthError: If authentication fails.
+            SpreadsheetNotFound: If the spreadsheet ID is invalid or inaccessible.
+            APIError: For other Google API errors.
+            Exception: For other unexpected errors.
+        """
+        try:
+            client = self._get_client(user_id)
+            if not client:
+                # Auth failure already logged in _get_client
+                return None
+
+            spreadsheet = client.open_by_key(spreadsheet_id)
+            logger.info(f"Opened spreadsheet '{spreadsheet.title}' (ID: {spreadsheet_id}) for user {user_id}")
+            return spreadsheet
+
+        except SpreadsheetNotFound:
+            logger.warning(f"Spreadsheet not found or inaccessible (ID: {spreadsheet_id}) for user {user_id}")
+            raise  # Re-raise specific error
+        except APIError as e:
+            # Handle potential quota errors, permission issues etc.
+            logger.error(f"API error opening spreadsheet {spreadsheet_id} for user {user_id}: {e}")
+            if "PERMISSION_DENIED" in str(e):
+                logger.warning(f"Permission denied for spreadsheet {spreadsheet_id}, user {user_id}.")
+                # Consider raising a custom PermissionError?
+            raise  # Re-raise APIError
+        # GoogleAuthError and other exceptions are raised by _get_client
+
+    def list_spreadsheets(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Lists spreadsheets accessible to the user.
+
+        Args:
+            user_id: Unique ID of the user.
+
+        Returns:
+            A list of spreadsheet metadata dictionaries, or an empty list on failure.
+
+        Raises:
+            GoogleAuthError: If authentication fails.
+            APIError: For Google API errors during listing.
+            Exception: For other unexpected errors.
+        """
+        try:
+            client = self._get_client(user_id)
+            if not client:
+                return []  # Return empty list on auth failure
+
+            files = client.list_spreadsheet_files()
+            logger.info(f"Listed {len(files)} spreadsheets for user {user_id}")
+            return files
+        except APIError as e:
+            logger.error(f"API error listing spreadsheets for user {user_id}: {e}")
+            raise  # Re-raise APIError
+        # GoogleAuthError and other exceptions are raised by _get_client
+
+    def is_authenticated(self, user_id: str) -> bool:
+        """
+        Checks if the user has valid credentials according to OAuthManager.
+
+        Args:
+            user_id: Unique ID of the user.
+
+        Returns:
+            True if the user is considered authenticated, False otherwise.
+        """
+        # Delegate directly to OAuthManager, which handles refresh checks etc.
+        return self.oauth_manager.is_authenticated(user_id)
+
+    def clear_user_cache(self, user_id: str) -> None:
+        """Explicitly clears the client cache for a specific user (e.g., on logout)."""
+        self._clear_cache(user_id)
