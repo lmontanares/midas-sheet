@@ -30,11 +30,7 @@ class OAuthManager:
     # Use a more specific scope if only spreadsheet access is needed
     SCOPES = [
         "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive.file",
-        "https://www.googleapis.com/auth/drive.readonly",
     ]
-    # If drive access is truly needed:
-    # SCOPES = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
     # Google's token revocation endpoint
     REVOCATION_ENDPOINT = "https://oauth2.googleapis.com/revoke"
