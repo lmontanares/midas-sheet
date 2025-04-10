@@ -149,10 +149,10 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         return
 
-    # Verificar si el usuario tiene una hoja activa
-    if not context.user_data.get("active_spreadsheet_id"):
-        await update.message.reply_text("⚠️ Debes seleccionar una hoja de cálculo primero.\n\nUsa /sheet <ID> para seleccionar una.")
-        return
+    # Verificar si el usuario tiene una hoja activa (REMOVED - Handled implicitly by SheetsOperations)
+    # if not context.user_data.get("active_spreadsheet_id"):
+    #     await update.message.reply_text("⚠️ Debes seleccionar una hoja de cálculo primero.\n\nUsa /sheet <ID> para seleccionar una.")
+    #     return
 
     try:
         # Mostrar primero un selector entre gasto e ingreso
@@ -218,11 +218,11 @@ async def register_transaction(
     user_id = str(user.id)
     sheets_ops: SheetsOperations = context.bot_data.get("sheets_operations")
     try:
-        # Verificar si hay una hoja activa
-        active_spreadsheet_id = context.user_data.get("active_spreadsheet_id")
-        if not active_spreadsheet_id:
-            await update.effective_message.reply_text("❌ Error: No hay una hoja de cálculo activa. Por favor, usa /sheet <ID> para seleccionar una.")
-            return
+        # Verificar si hay una hoja activa (REMOVED - Handled by sheets_ops.append_row -> get_worksheet)
+        # active_spreadsheet_id = context.user_data.get("active_spreadsheet_id")
+        # if not active_spreadsheet_id:
+        #     await update.effective_message.reply_text("❌ Error: No hay una hoja de cálculo activa. Por favor, usa /sheet <ID> para seleccionar una.")
+        #     return
 
         if expense_type == "gasto":
             sheet_name = "gastos"
@@ -294,8 +294,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # pero sí validar cuando sea un flujo de transacción
         pass
 
-    # Verificar si hay una hoja activa (excepto para comandos básicos)
-    active_spreadsheet_id = context.user_data.get("active_spreadsheet_id")
+    # Verificar si hay una hoja activa (REMOVED - Handled implicitly later in the flow)
+    # active_spreadsheet_id = context.user_data.get("active_spreadsheet_id")
 
     # Obtener los datos del callback
     data = query.data.split("|")
@@ -308,9 +308,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
             return
 
-        if not active_spreadsheet_id:
-            await query.edit_message_text("⚠️ Debes seleccionar una hoja de cálculo primero.\n\nUsa /sheet <ID> para seleccionar una.")
-            return
+        # Check for active sheet removed - will be handled by SheetsOperations when needed
+        # if not active_spreadsheet_id:
+        #     await query.edit_message_text("⚠️ Debes seleccionar una hoja de cálculo primero.\n\nUsa /sheet <ID> para seleccionar una.")
+        #     return
 
         expense_type = data[1]
 

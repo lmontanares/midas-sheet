@@ -147,3 +147,19 @@ class Config:
                 'Genera una con: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
             )
         return key.encode()
+
+    @property
+    def database_url(self) -> str:
+        """
+        Obtiene la URL de conexión a la base de datos.
+
+        Returns:
+            URL de conexión a la base de datos
+
+        Raises:
+            ValueError: Si no se encuentra la URL
+        """
+        url = os.getenv("DATABASE_URL")
+        if not url:
+            raise ValueError("DATABASE_URL no encontrado en variables de entorno")
+        return url

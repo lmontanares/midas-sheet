@@ -14,6 +14,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes
 from src.auth.oauth import OAuthManager
 from src.bot.auth_handlers import _send_auth_success_message
 from src.bot.bot import TelegramBot
+from src.database import init_db
 from src.server.oauth_server import OAuthServer
 from src.sheets.client import GoogleSheetsClient
 from src.sheets.operations import SheetsOperations
@@ -98,14 +99,12 @@ def main() -> None:
         # Cargar configuración
         config = Config()
 
-        # Crear directorio de tokens si no existe
-        tokens_dir = Path(config.oauth_tokens_dir)
-        tokens_dir.mkdir(exist_ok=True, parents=True)
+        # Initialize Database
+        init_db()
 
         # 1. Initialize OAuth Manager
         oauth_manager = OAuthManager(
             client_secrets_file=config.oauth_credentials_path,
-            token_dir=config.oauth_tokens_dir,
             redirect_uri=config.oauth_redirect_uri,
             encryption_key=config.oauth_encryption_key,
         )

@@ -474,3 +474,135 @@ Las modificaciones más significativas en la última versión (v3.1) incluyen:
    - Mensajes de error más claros y específicos
 
 Estas modificaciones aumentan significativamente la seguridad del sistema al proteger adecuadamente los tokens de acceso de los usuarios, evitando posibles fugas de información sensible y proporcionando un método seguro para la revocación de accesos.
+
+---
+
+## 9. Plan de Integración de Base de Datos SQL
+
+### 9.1. Recomendación de Tecnología de Base de Datos
+
+Se recomienda iniciar con **SQLite** por su simplicidad y facilidad de integración.
+
+*   **Pros:** Sin servidor (basado en archivos), soporte integrado en Python (`sqlite3`), bien soportado por ORMs como SQLAlchemy, fácil configuración para desarrollo y despliegues de instancia única.
+*   **Cons:** Puede enfrentar limitaciones de concurrencia bajo carga muy alta, menos características que las bases de datos basadas en servidor.
+
+Se puede migrar fácilmente a **PostgreSQL** más adelante si la escalabilidad se convierte en una preocupación, especialmente si se utiliza un ORM como SQLAlchemy.
+
+### 9.2. Diseño del Esquema de Base de Datos
+
+Se proponen tres tablas principales: `users`, `auth_tokens`, y `user_sheets`.
+
+```mermaid
+erDiagram
+    users ||--o{ auth_tokens : "stores"
+    users ||--o{ user_sheets : "selects"
+
+    users {
+        TEXT user_id PK "Telegram User ID"
+        TEXT telegram_username NULL
+        TEXT first_name NULL
+        TEXT last_name NULL
+        TIMESTAMP created_at "DEFAULT CURRENT_TIMESTAMP"
+        TIMESTAMP updated_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    auth_tokens {
+        TEXT user_id PK FK "References users.user_id"
+        BLOB encrypted_token "Fernet encrypted token data"
+        TIMESTAMP token_expiry NULL "Optional: Extracted expiry for cleanup"
+        TIMESTAMP created_at "DEFAULT CURRENT_TIMESTAMP"
+        TIMESTAMP updated_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+    user_sheets {
+        TEXT user_id PK FK "References users.user_id"
+        TEXT spreadsheet_id "Google Sheet ID"
+        TEXT spreadsheet_title NULL "Optional: Sheet title"
+        BOOLEAN is_active "DEFAULT TRUE"
+        TIMESTAMP created_at "DEFAULT CURRENT_TIMESTAMP"
+        TIMESTAMP updated_at "DEFAULT CURRENT_TIMESTAMP"
+    }
+
+```
+
+**Definiciones de Tablas:**
+
+*   **`users`**: Almacena información básica sobre los usuarios de Telegram.
+    *   `user_id` (TEXT/BIGINT, Primary Key): ID único de usuario de Telegram.
+    *   `telegram_username` (TEXT, Nullable): Nombre de usuario de Telegram.
+    *   `first_name` (TEXT, Nullable): Nombre del usuario.
+    *   `last_name` (TEXT, Nullable): Apellido del usuario.
+    *   `created_at` (TIMESTAMP): Fecha de creación del usuario.
+    *   `updated_at` (TIMESTAMP): Fecha de última actualización.
+*   **`auth_tokens`**: Reemplaza el directorio `tokens/` para almacenar tokens OAuth de Google encriptados.
+    *   `user_id` (TEXT/BIGINT, Primary Key, Foreign Key -> `users.user_id`): Enlace al usuario.
+    *   `encrypted_token` (BLOB/TEXT): Almacena la salida de `Fernet.encrypt()`. Se prefiere BLOB para datos binarios.
+    *   `token_expiry` (TIMESTAMP, Nullable): Opcionalmente, almacena la fecha de expiración del token sin encriptar para facilitar la consulta/limpieza.
+    *   `created_at` (TIMESTAMP): Fecha de creación del token.
+    *   `updated_at` (TIMESTAMP): Fecha de última actualización del token (ej., después de refrescar).
+*   **`user_sheets`**: Asocia usuarios con su hoja de cálculo de Google seleccionada.
+    *   `user_id` (TEXT/BIGINT, Primary Key, Foreign Key -> `users.user_id`): Enlace al usuario.
+    *   `spreadsheet_id` (TEXT): ID de la hoja de Google seleccionada por el usuario.
+    *   `spreadsheet_title` (TEXT, Nullable): Título de la hoja para retroalimentación al usuario.
+    *   `is_active` (BOOLEAN): Actualmente asume una hoja por usuario, pero permite expansión futura.
+    *   `created_at` (TIMESTAMP): Fecha de asociación de la hoja.
+    *   `updated_at` (TIMESTAMP): Fecha de última actualización.
+
+### 9.3. Esquema del Plan de Implementación
+
+1.  **Añadir Dependencias:**
+    *   Instalar SQLAlchemy: `uv pip install SQLAlchemy`
+    *   Actualizar `pyproject.toml`.
+2.  **Configurar Base de Datos:**
+    *   Añadir `DATABASE_URL` a `.env.example` y `.env` (ej., `DATABASE_URL=sqlite:///./finanzas.db`).
+    *   Actualizar `src/utils/config.py` para leer `DATABASE_URL`.
+3.  **Módulo de Base de Datos (`src/database.py` - Nuevo Archivo):**
+    *   Crear módulo para manejar la configuración de la conexión (usando engine y session management de SQLAlchemy).
+    *   Definir modelos SQLAlchemy para las tablas `Users`, `AuthTokens`, y `UserSheets`.
+    *   Incluir función `init_db()` para crear tablas si no existen (`metadata.create_all(engine)`), llamada desde `main.py`.
+4.  **Integrar Gestión de Usuarios:**
+    *   En `src/bot/auth_handlers.py` (`start_command`, `auth_command`): Realizar operación "upsert" en la tabla `users`.
+5.  **Refactorizar Almacenamiento de Tokens (`src/auth/oauth.py`):**
+    *   Eliminar operaciones basadas en archivos (`_get_token_path`, uso de `Path`, parámetro `token_dir`).
+    *   Inyectar la sesión/conexión de la base de datos.
+    *   `save_token`: Encriptar datos del token, luego hacer upsert en `auth_tokens`.
+    *   `load_token`: Consultar `auth_tokens` por `user_id`, desencriptar si se encuentra.
+    *   `revoke_token`: Eliminar fila de `auth_tokens` después de llamar al endpoint de revocación de Google.
+    *   `get_credentials`: Usa los nuevos `load_token` y `save_token`.
+6.  **Refactorizar Almacenamiento de ID de Hoja de Cálculo:**
+    *   En `src/bot/auth_handlers.py` (`sheet_command`):
+        *   Eliminar almacenamiento de `active_spreadsheet_id` en `context.user_data`.
+        *   Después de la validación exitosa, hacer upsert en `user_sheets`.
+    *   En `src/sheets/operations.py`:
+        *   Eliminar diccionario `self.user_spreadsheets`.
+        *   Inyectar la sesión/conexión de la base de datos.
+        *   Modificar métodos para consultar `user_sheets` por `user_id` para obtener el `spreadsheet_id`.
+    *   En `src/bot/handlers.py` (ej., `add_command`): Obtener `spreadsheet_id` de la base de datos.
+7.  **Actualizar Inicialización (`main.py`):**
+    *   Llamar a `init_db()` al inicio.
+    *   Inyectar sesiones/conexiones de base de datos donde sea necesario.
+8.  **Migración de Datos:**
+    *   **Recomendación:** Requerir que los usuarios se re-autentiquen (`/auth`) después de la actualización. Es el enfoque más simple.
+    *   Comunicar este requisito a los usuarios.
+9.  **Pruebas:**
+    *   Actualizar pruebas existentes para mockear interacciones con la base de datos o usar una base de datos de prueba.
+    *   Añadir nuevas pruebas para la capa de base de datos.
+10. **Documentación:**
+    *   Actualizar `README.md` u otra documentación sobre la nueva dependencia y configuración de la base de datos.
+
+### 9.4. Archivos que Requieren Modificación
+
+*   `main.py`
+*   `src/auth/oauth.py`
+*   `src/bot/auth_handlers.py`
+*   `src/bot/handlers.py` (cualquier comando que use la hoja)
+*   `src/sheets/operations.py`
+*   `src/utils/config.py`
+*   `.env.example`
+*   `pyproject.toml`
+*   `README.md` / `docs/handover.md`
+*   `tests/` (archivos de prueba relevantes)
+
+**Nuevos Archivos:**
+
+*   `src/database.py` (o similar para modelos de BD y gestión de sesiones)
