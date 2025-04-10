@@ -217,10 +217,6 @@ async def register_transaction(
     user = update.effective_user
     user_id = str(user.id)
     sheets_ops: SheetsOperations = context.bot_data.get("sheets_operations")
-
-    # Obtener la hoja de cálculo adecuada según el tipo de transacción
-    sheet_name = "gastos" if expense_type == "gasto" else "ingresos"
-
     try:
         # Verificar si hay una hoja activa
         active_spreadsheet_id = context.user_data.get("active_spreadsheet_id")
@@ -228,16 +224,27 @@ async def register_transaction(
             await update.effective_message.reply_text("❌ Error: No hay una hoja de cálculo activa. Por favor, usa /sheet <ID> para seleccionar una.")
             return
 
-        # Preparar la fila para añadir
-        row_data = [
-            date,  # Fecha
-            user.username or user.first_name,  # Usuario
-            category,  # Categoría principal
-            subcategory,  # Subcategoría
-            amount,  # Monto
-            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),  # Timestamp
-            comment,  # Comentario
-        ]
+        if expense_type == "gasto":
+            sheet_name = "gastos"
+            row_data = [
+                date,
+                user.username or user.first_name,
+                category,
+                subcategory,
+                amount,
+                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                comment,
+            ]
+        elif expense_type == "ingreso":
+            sheet_name = "ingresos"
+            row_data = [
+                date,
+                user.username or user.first_name,
+                category,
+                amount,
+                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                comment,
+            ]
 
         # Añadir la fila a la hoja correspondiente
         sheets_ops.append_row(user_id, sheet_name, row_data)
