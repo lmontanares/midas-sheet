@@ -118,18 +118,6 @@ class Config:
         return os.getenv("OAUTH_REDIRECT_URI", default_uri)
 
     @property
-    def default_spreadsheet_id(self) -> str:
-        """
-        Obtiene el ID de la hoja de cálculo por defecto (opcional).
-
-        Este valor es opcional ya que con OAuth cada usuario puede seleccionar su hoja.
-
-        Returns:
-            ID de la hoja de cálculo por defecto o cadena vacía
-        """
-        return os.getenv("DEFAULT_SPREADSHEET_ID", "")
-
-    @property
     def oauth_encryption_key(self) -> bytes:
         """
         Obtiene la clave de encriptación para los tokens OAuth.
