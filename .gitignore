@@ -35,3 +35,6 @@ Thumbs.db
 
 #Tokens
 tokens
+
+#DBs
+*.db
