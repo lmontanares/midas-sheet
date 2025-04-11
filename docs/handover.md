@@ -163,6 +163,8 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 │   │   ├── client.py     # Cliente para conectar con Google Sheets
 │   │   └── operations.py # Operaciones con las hojas de cálculo
 │   │
+│   ├── database.py     # Módulo de base de datos (SQLAlchemy)
+│   │
 │   └── utils/            # Utilidades comunes
 │       ├── __init__.py   # Inicialización del módulo
 │       ├── config.py     # Configuración y variables de entorno
@@ -249,6 +251,10 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
   - Pruebas para la autenticación OAuth
   - Pruebas para el servidor de redirección
   - Mocks para APIs externas (Telegram, Google)
+- **Implementación de la base de datos SQL con SQLAlchemy y SQLite:**
+ - Almacenamiento persistente de usuarios, tokens de autenticación encriptados y hojas de cálculo seleccionadas.
+ - Creación de las tablas `User`, `AuthToken` y `UserSheet` según el esquema planificado.
+ - Refactorización del almacenamiento de tokens y selección de hojas para usar la base de datos.
 
 ### Progreso y logros hasta la fecha
 - Implementación completa del sistema de autenticación OAuth 2.0
@@ -269,7 +275,7 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - Las hojas "gastos" e "ingresos" incluyen columnas para categoría, subcategoría y comentario
 - Comando `/help` actualizado con los nuevos comandos disponibles
 - Implementación completa del sistema de tipado estático moderno
-
+- Implementación exitosa de la integración con base de datos SQL (SQLAlchemy + SQLite).
 ### Documentación técnica existente
 - Docstrings detallados en clases y métodos principales
 - README.md actualizado con instrucciones para OAuth 2.0
@@ -293,7 +299,6 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 - **La clave de encriptación se almacena en la variable de entorno `OAUTH_ENCRYPTION_KEY`, lo que requiere protección adicional del archivo `.env`**
 
 ### Deuda técnica acumulada
-- La estructura para modelos y servicios está creada pero sin implementación completa
 - No hay validación de datos exhaustiva para las entradas financieras
 - Las cargas asíncronas para múltiples componentes no están implementadas de manera óptima
 - No hay documentación de usuario final completa
@@ -332,9 +337,10 @@ El flujo de información comienza cuando el usuario envía comandos al bot a tra
 5. Implementar comando para visualizar resúmenes (ej: gastos por categoría) por usuario
 6. Mejorar la validación de datos de entrada en todos los campos
 7. Añadir funcionalidad para editar o eliminar transacciones
-8. **Implementar pruebas para las nuevas funcionalidades de encriptación**
+8. **Implementar pruebas para las nuevas funcionalidades de encriptación (incluyendo interacciones con BD)**
 9. Configurar verificación estática de tipos con mypy
 10. Mejorar documentación de usuario final para el proceso de autenticación
+11. Monitorear el rendimiento de la base de datos y optimizar consultas si es necesario.
 
 ### Características planificadas a medio/largo plazo
 1. **Sistema de almacenamiento más seguro para claves criptográficas (HSM o sistemas de gestión de secretos)**
@@ -477,18 +483,11 @@ Estas modificaciones aumentan significativamente la seguridad del sistema al pro
 
 ---
 
-## 9. Plan de Integración de Base de Datos SQL
+## 9. Implementación de Base de Datos SQL
 
-### 9.1. Recomendación de Tecnología de Base de Datos
+La integración con una base de datos SQL ha sido implementada utilizando SQLAlchemy con un backend SQLite. Esta implementación reemplaza el almacenamiento basado en archivos para los tokens de autenticación y gestiona la información de usuarios y las hojas de cálculo seleccionadas.
 
-Se recomienda iniciar con **SQLite** por su simplicidad y facilidad de integración.
-
-*   **Pros:** Sin servidor (basado en archivos), soporte integrado en Python (`sqlite3`), bien soportado por ORMs como SQLAlchemy, fácil configuración para desarrollo y despliegues de instancia única.
-*   **Cons:** Puede enfrentar limitaciones de concurrencia bajo carga muy alta, menos características que las bases de datos basadas en servidor.
-
-Se puede migrar fácilmente a **PostgreSQL** más adelante si la escalabilidad se convierte en una preocupación, especialmente si se utiliza un ORM como SQLAlchemy.
-
-### 9.2. Diseño del Esquema de Base de Datos
+### 9.1. Diseño del Esquema de Base de Datos Implementado
 
 Se proponen tres tablas principales: `users`, `auth_tokens`, y `user_sheets`.
 
@@ -525,7 +524,7 @@ erDiagram
 
 ```
 
-**Definiciones de Tablas:**
+**Definiciones de Tablas Implementadas:**
 
 *   **`users`**: Almacena información básica sobre los usuarios de Telegram.
     *   `user_id` (TEXT/BIGINT, Primary Key): ID único de usuario de Telegram.
@@ -534,9 +533,9 @@ erDiagram
     *   `last_name` (TEXT, Nullable): Apellido del usuario.
     *   `created_at` (TIMESTAMP): Fecha de creación del usuario.
     *   `updated_at` (TIMESTAMP): Fecha de última actualización.
-*   **`auth_tokens`**: Reemplaza el directorio `tokens/` para almacenar tokens OAuth de Google encriptados.
+*   **`auth_tokens`**: Almacena tokens OAuth de Google encriptados, reemplazando el directorio `tokens/`.
     *   `user_id` (TEXT/BIGINT, Primary Key, Foreign Key -> `users.user_id`): Enlace al usuario.
-    *   `encrypted_token` (BLOB/TEXT): Almacena la salida de `Fernet.encrypt()`. Se prefiere BLOB para datos binarios.
+    *   `encrypted_token` (BLOB/TEXT): Almacena la salida de `Fernet.encrypt()`.
     *   `token_expiry` (TIMESTAMP, Nullable): Opcionalmente, almacena la fecha de expiración del token sin encriptar para facilitar la consulta/limpieza.
     *   `created_at` (TIMESTAMP): Fecha de creación del token.
     *   `updated_at` (TIMESTAMP): Fecha de última actualización del token (ej., después de refrescar).
@@ -547,62 +546,3 @@ erDiagram
     *   `is_active` (BOOLEAN): Actualmente asume una hoja por usuario, pero permite expansión futura.
     *   `created_at` (TIMESTAMP): Fecha de asociación de la hoja.
     *   `updated_at` (TIMESTAMP): Fecha de última actualización.
-
-### 9.3. Esquema del Plan de Implementación
-
-1.  **Añadir Dependencias:**
-    *   Instalar SQLAlchemy: `uv pip install SQLAlchemy`
-    *   Actualizar `pyproject.toml`.
-2.  **Configurar Base de Datos:**
-    *   Añadir `DATABASE_URL` a `.env.example` y `.env` (ej., `DATABASE_URL=sqlite:///./finanzas.db`).
-    *   Actualizar `src/utils/config.py` para leer `DATABASE_URL`.
-3.  **Módulo de Base de Datos (`src/database.py` - Nuevo Archivo):**
-    *   Crear módulo para manejar la configuración de la conexión (usando engine y session management de SQLAlchemy).
-    *   Definir modelos SQLAlchemy para las tablas `Users`, `AuthTokens`, y `UserSheets`.
-    *   Incluir función `init_db()` para crear tablas si no existen (`metadata.create_all(engine)`), llamada desde `main.py`.
-4.  **Integrar Gestión de Usuarios:**
-    *   En `src/bot/auth_handlers.py` (`start_command`, `auth_command`): Realizar operación "upsert" en la tabla `users`.
-5.  **Refactorizar Almacenamiento de Tokens (`src/auth/oauth.py`):**
-    *   Eliminar operaciones basadas en archivos (`_get_token_path`, uso de `Path`, parámetro `token_dir`).
-    *   Inyectar la sesión/conexión de la base de datos.
-    *   `save_token`: Encriptar datos del token, luego hacer upsert en `auth_tokens`.
-    *   `load_token`: Consultar `auth_tokens` por `user_id`, desencriptar si se encuentra.
-    *   `revoke_token`: Eliminar fila de `auth_tokens` después de llamar al endpoint de revocación de Google.
-    *   `get_credentials`: Usa los nuevos `load_token` y `save_token`.
-6.  **Refactorizar Almacenamiento de ID de Hoja de Cálculo:**
-    *   En `src/bot/auth_handlers.py` (`sheet_command`):
-        *   Eliminar almacenamiento de `active_spreadsheet_id` en `context.user_data`.
-        *   Después de la validación exitosa, hacer upsert en `user_sheets`.
-    *   En `src/sheets/operations.py`:
-        *   Eliminar diccionario `self.user_spreadsheets`.
-        *   Inyectar la sesión/conexión de la base de datos.
-        *   Modificar métodos para consultar `user_sheets` por `user_id` para obtener el `spreadsheet_id`.
-    *   En `src/bot/handlers.py` (ej., `add_command`): Obtener `spreadsheet_id` de la base de datos.
-7.  **Actualizar Inicialización (`main.py`):**
-    *   Llamar a `init_db()` al inicio.
-    *   Inyectar sesiones/conexiones de base de datos donde sea necesario.
-8.  **Migración de Datos:**
-    *   **Recomendación:** Requerir que los usuarios se re-autentiquen (`/auth`) después de la actualización. Es el enfoque más simple.
-    *   Comunicar este requisito a los usuarios.
-9.  **Pruebas:**
-    *   Actualizar pruebas existentes para mockear interacciones con la base de datos o usar una base de datos de prueba.
-    *   Añadir nuevas pruebas para la capa de base de datos.
-10. **Documentación:**
-    *   Actualizar `README.md` u otra documentación sobre la nueva dependencia y configuración de la base de datos.
-
-### 9.4. Archivos que Requieren Modificación
-
-*   `main.py`
-*   `src/auth/oauth.py`
-*   `src/bot/auth_handlers.py`
-*   `src/bot/handlers.py` (cualquier comando que use la hoja)
-*   `src/sheets/operations.py`
-*   `src/utils/config.py`
-*   `.env.example`
-*   `pyproject.toml`
-*   `README.md` / `docs/handover.md`
-*   `tests/` (archivos de prueba relevantes)
-
-**Nuevos Archivos:**
-
-*   `src/database.py` (o similar para modelos de BD y gestión de sesiones)
