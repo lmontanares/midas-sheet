@@ -19,7 +19,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from sqlalchemy.sql import func
 
-from .utils.config import Config
+from ..utils.config import Config
 
 # Load database URL from config
 try:

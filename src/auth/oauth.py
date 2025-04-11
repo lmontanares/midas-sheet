@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 # Assuming database.py is in the parent directory relative to this file's location in src/auth
 # Adjust the import path if necessary based on your final project structure
-from ..database import AuthToken, SessionLocal, User
+from ..db.database import AuthToken, SessionLocal, User
 
 
 class OAuthManager:

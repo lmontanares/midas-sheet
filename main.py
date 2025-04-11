@@ -14,7 +14,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes
 from src.auth.oauth import OAuthManager
 from src.bot.auth_handlers import _send_auth_success_message
 from src.bot.bot import TelegramBot
-from src.database import init_db
+from src.db.database import init_db
 from src.server.oauth_server import OAuthServer
 from src.sheets.client import GoogleSheetsClient
 from src.sheets.operations import SheetsOperations

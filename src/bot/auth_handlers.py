@@ -11,7 +11,7 @@ from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from ..auth.oauth import OAuthManager  # Assuming OAuthManager is correctly imported
-from ..database import SessionLocal, User, UserSheet
+from ..db.database import SessionLocal, User, UserSheet
 from ..sheets.operations import SheetsOperations
 
 # --- Helper Functions ---

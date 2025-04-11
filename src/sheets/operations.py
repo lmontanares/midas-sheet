@@ -10,7 +10,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..database import SessionLocal, UserSheet
+from ..db.database import SessionLocal, UserSheet
 from .client import GoogleSheetsClient
 
 
