@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import secrets
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import requests
 from cryptography.fernet import Fernet, InvalidToken
@@ -54,7 +54,7 @@ class OAuthManager:
         self.client_secrets_file = client_secrets_file
         self.redirect_uri = redirect_uri
         self.fernet = Fernet(encryption_key)
-        self._pending_states: Dict[str, str] = {}
+        self._pending_states: dict[str, str] = {}
 
         if not os.path.exists(self.client_secrets_file):
             logger.error(f"OAuth client secrets file not found: {self.client_secrets_file}")
@@ -81,7 +81,7 @@ class OAuthManager:
             logger.error("Client secret not found in client secrets file.")
             raise ValueError("Client secret missing in client secrets configuration.")
 
-    def generate_auth_url(self, user_id: str) -> Tuple[str, str]:
+    def generate_auth_url(self, user_id: str) -> tuple[str, str]:
         """
         Generates a secure authorization URL for a user.
 
@@ -142,7 +142,7 @@ class OAuthManager:
             db.rollback()  # Rollback on error during user upsert
             raise  # Re-raise the exception to be caught by the caller
 
-    def exchange_code(self, state: str, code: str) -> Optional[str]:
+    def exchange_code(self, state: str, code: str) -> str | None:
         """
         Exchanges an authorization code for tokens using the provided state.
         Ensures the user exists in the DB before saving the token.
@@ -205,7 +205,7 @@ class OAuthManager:
             if db:
                 db.close()
 
-    def get_credentials(self, user_id: str) -> Optional[Credentials]:
+    def get_credentials(self, user_id: str) -> Credentials | None:
         """
         Loads, decrypts, and potentially refreshes credentials for a user from the database.
 
@@ -277,7 +277,7 @@ class OAuthManager:
             logger.error(f"Error processing credentials for user {user_id}: {e}")
             return None
 
-    def revoke_token(self, user_id: str, token_to_revoke: Optional[str] = None) -> bool:
+    def revoke_token(self, user_id: str, token_to_revoke: str | None = None) -> bool:
         """
         Revokes Google API access for the user and deletes the token from the database.
 
@@ -353,7 +353,7 @@ class OAuthManager:
 
     # Removed _delete_token_file method
 
-    def save_token(self, user_id: str, token_data: Dict[str, Any], db_session: Optional[Session] = None) -> None:
+    def save_token(self, user_id: str, token_data: dict[str, Any], db_session: Session | None = None) -> None:
         """
         Encrypts and saves token data to the database for the user.
         Can use an existing session or create a new one.
@@ -375,7 +375,7 @@ class OAuthManager:
 
             # Extract expiry and convert to datetime object if present
             expiry_iso = token_data.get("expiry")
-            token_expiry_dt: Optional[datetime.datetime] = None
+            token_expiry_dt: datetime.datetime | None = None
             if expiry_iso:
                 try:
                     # Handle potential timezone info (e.g., 'Z' or +HH:MM) if present
@@ -439,7 +439,7 @@ class OAuthManager:
             if manage_session and db:
                 db.close()
 
-    def load_token(self, user_id: str) -> Optional[Dict[str, Any]]:
+    def load_token(self, user_id: str) -> dict[str, Any] | None:
         """
         Loads and decrypts token data from the database for a user.
 

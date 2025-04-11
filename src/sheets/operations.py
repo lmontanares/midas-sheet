@@ -3,7 +3,7 @@ Operaciones para manipular datos en Google Sheets usando gspread con OAuth 2.0.
 Interactúa con la base de datos para obtener la hoja de cálculo activa del usuario.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 import gspread
 from loguru import logger
@@ -30,7 +30,7 @@ class SheetsOperations:
         self.client = client
         # self.user_spreadsheets: dict[str, dict[str, Any]] = {} # Removed: Store active sheet in DB
 
-    def _get_active_spreadsheet_id(self, db: Session, user_id: str) -> Optional[str]:
+    def _get_active_spreadsheet_id(self, db: Session, user_id: str) -> str | None:
         """Obtiene el ID de la hoja de cálculo activa para el usuario desde la BD."""
         stmt = select(UserSheet.spreadsheet_id).where(
             UserSheet.user_id == user_id,
@@ -42,7 +42,7 @@ class SheetsOperations:
             return None
         return spreadsheet_id
 
-    def setup_for_user(self, user_id: str, spreadsheet_id: str) -> Optional[str]:
+    def setup_for_user(self, user_id: str, spreadsheet_id: str) -> str | None:
         """
         Verifica el acceso a la hoja de cálculo para un usuario específico y la prepara.
         NO guarda la referencia en memoria, solo verifica y asegura hojas internas.
@@ -137,7 +137,7 @@ class SheetsOperations:
             logger.exception(f"Unexpected error ensuring internal sheets exist for user {user_id} in '{spreadsheet.title}': {e}")
             raise
 
-    def get_worksheet(self, user_id: str, sheet_name: str) -> Optional[gspread.Worksheet]:
+    def get_worksheet(self, user_id: str, sheet_name: str) -> gspread.Worksheet | None:
         """
         Obtiene una hoja de trabajo específica de la hoja de cálculo activa del usuario.
 

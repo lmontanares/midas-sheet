@@ -3,7 +3,6 @@ Database module for SQLAlchemy setup, models, and session management.
 """
 
 import datetime
-from typing import Optional
 
 from loguru import logger
 from sqlalchemy import (
@@ -51,9 +50,9 @@ class User(Base):
     __tablename__ = "users"
 
     user_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
-    telegram_username: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    first_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    last_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    telegram_username: Mapped[str | None] = mapped_column(String, nullable=True)
+    first_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -69,7 +68,7 @@ class AuthToken(Base):
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.user_id"), primary_key=True)
     # Use BLOB for encrypted data, TEXT might work for Base64 but BLOB is safer
     encrypted_token: Mapped[bytes] = mapped_column(BLOB, nullable=False)
-    token_expiry: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    token_expiry: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -84,7 +83,7 @@ class UserSheet(Base):
 
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.user_id"), primary_key=True)
     spreadsheet_id: Mapped[str] = mapped_column(Text, nullable=False)
-    spreadsheet_title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    spreadsheet_title: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

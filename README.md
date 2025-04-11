@@ -7,7 +7,7 @@ Este proyecto implementa un sistema de gestión financiera que consta de dos com
 
 ## Requisitos
 
-- Python 3.9 o superior
+- Python 3.13
 - Token de bot de Telegram (obtenido a través de [@BotFather](https://t.me/botfather))
 - Credenciales de la API de Google (archivo JSON)
 - Hoja de cálculo de Google Sheets con los permisos adecuados

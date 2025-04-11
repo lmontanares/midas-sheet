@@ -6,7 +6,7 @@ Este script inicia tanto el bot de Telegram como la conexión con Google Sheets.
 
 import functools
 from pathlib import Path
-from typing import Optional
+
 
 from loguru import logger
 from telegram.ext import ApplicationBuilder, ContextTypes
@@ -24,7 +24,7 @@ from src.utils.logger import setup_logging
 
 def main_oauth_callback_handler(
     state: str, code: str, oauth_manager: OAuthManager, sheets_client: GoogleSheetsClient, job_queue: ContextTypes.DEFAULT_TYPE.job_queue
-) -> Optional[str]:
+) -> str | None:
     """
     Handles the callback from the OAuth server within the main script's context.
     Exchanges code for token and schedules success message.

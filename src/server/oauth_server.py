@@ -1,7 +1,7 @@
 import signal  # For basic shutdown
 import threading
 import webbrowser
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable
 from urllib.parse import urlparse  # To check scheme
 
 from flask import Flask, jsonify, request  # Added jsonify
@@ -9,7 +9,7 @@ from loguru import logger
 from werkzeug.serving import make_server  # For potentially better shutdown control
 
 # Define a type hint for the callback function
-OAuthCallbackHandler = Callable[[str, str], Optional[str]]  # Accepts state, code; returns Optional[user_id]
+OAuthCallbackHandler = Callable[[str, str], str | None]  # Accepts state, code; returns user_id or None
 
 
 class OAuthServer:
@@ -37,8 +37,8 @@ class OAuthServer:
         self.port = port
         self.callback_handler = callback_handler
         self.app = Flask(__name__)
-        self.server: Optional[make_server] = None
-        self.server_thread: Optional[threading.Thread] = None
+        self.server: make_server | None = None
+        self.server_thread: threading.Thread | None = None
         self.redirect_uri = redirect_uri
 
         # Check if redirect URI uses HTTPS if not localhost
