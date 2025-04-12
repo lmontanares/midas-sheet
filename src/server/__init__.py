@@ -1,3 +1,3 @@
 """
-Módulo de servidor web para el sistema de gestión financiera.
+Web server module for the financial management system.
 """

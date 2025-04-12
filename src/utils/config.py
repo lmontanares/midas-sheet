@@ -1,5 +1,5 @@
 """
-Módulo para la gestión de configuración y variables de entorno.
+Module for managing configuration and environment variables.
 """
 
 import os
@@ -11,71 +11,71 @@ from loguru import logger
 
 class Config:
     """
-    Gestiona la configuración y variables de entorno del proyecto.
+    Manages project configuration and environment variables.
     """
 
     def __init__(self, env_file: str | Path | None = None) -> None:
         """
-        Inicializa la configuración.
+        Initializes the configuration from environment sources.
 
         Args:
-            env_file: Ruta al archivo .env (opcional)
+            env_file: Path to .env file (optional)
         """
         self._load_env(env_file)
 
     def _load_env(self, env_file: str | Path | None = None) -> None:
         """
-        Carga variables de entorno desde archivo .env.
+        Loads environment variables from .env file for configuration flexibility.
 
         Args:
-            env_file: Ruta al archivo .env (opcional)
+            env_file: Path to .env file (optional)
         """
         if env_file and os.path.exists(env_file):
             load_dotenv(env_file)
-            logger.info(f"Variables de entorno cargadas desde {env_file}")
+            logger.info(f"Environment variables loaded from {env_file}")
         else:
             load_dotenv()
-            logger.info("Variables de entorno cargadas (archivo por defecto)")
+            logger.info("Environment variables loaded (default file)")
 
     @property
     def telegram_token(self) -> str:
         """
-        Obtiene el token de Telegram desde variables de entorno.
+        Gets Telegram token from environment variables for API authentication.
 
         Returns:
-            Token de Telegram
+            Telegram token
 
         Raises:
-            ValueError: Si no se encuentra el token
+            ValueError: If token is not found
         """
         token = os.getenv("TELEGRAM_TOKEN")
         if not token:
-            raise ValueError("TELEGRAM_TOKEN no encontrado en variables de entorno")
+            raise ValueError("TELEGRAM_TOKEN not found in environment variables")
         return token
 
     @property
     def oauth_credentials_path(self) -> str:
         """
-        Obtiene la ruta al archivo de credenciales OAuth.
+        Gets the path to OAuth credentials file for Google API access.
 
         Returns:
-            Ruta al archivo de credenciales
+            Path to credentials file
 
         Raises:
-            ValueError: Si no se encuentra la ruta
+            ValueError: If path is not found
         """
         path = os.getenv("OAUTH_CREDENTIALS_PATH")
         if not path:
-            raise ValueError("OAUTH_CREDENTIALS_PATH no encontrado en variables de entorno")
+            raise ValueError("OAUTH_CREDENTIALS_PATH not found in environment variables")
         return path
 
     @property
     def oauth_tokens_dir(self) -> str:
         """
-        Obtiene el directorio para almacenar tokens OAuth.
+        Gets directory for storing OAuth tokens for persistent authentication.
 
         Returns:
-            Ruta al directorio de tokens
+            Path to tokens directory
         """
         default_dir = str(Path.cwd() / "tokens")
         return os.getenv("OAUTH_TOKENS_DIR", default_dir)
@@ -83,36 +83,36 @@ class Config:
     @property
     def oauth_server_host(self) -> str:
         """
-        Obtiene el host para el servidor OAuth.
+        Gets host for OAuth server for authentication flow.
 
         Returns:
-            Host del servidor OAuth
+            OAuth server host
         """
         return os.getenv("OAUTH_SERVER_HOST", "localhost")
 
     @property
     def oauth_server_port(self) -> int:
         """
-        Obtiene el puerto para el servidor OAuth.
+        Gets port for OAuth server for authentication flow.
 
         Returns:
-            Puerto del servidor OAuth
+            OAuth server port
         """
         try:
             return int(os.getenv("OAUTH_SERVER_PORT", "8000"))
         except ValueError:
-            logger.warning("Puerto OAuth inválido en variables de entorno, usando 8000")
+            logger.warning("Invalid OAuth port in environment variables, using 8000")
             return 8000
 
     @property
     def oauth_redirect_uri(self) -> str:
         """
-        Obtiene la URI de redirección para OAuth.
+        Gets OAuth redirect URI for completing authentication flow.
 
-        Si no está definida, se construye a partir del host y puerto.
+        If not defined, it's built from host and port.
 
         Returns:
-            URI de redirección completa
+            Complete redirect URI
         """
         default_uri = f"http://{self.oauth_server_host}:{self.oauth_server_port}/oauth2callback"
         return os.getenv("OAUTH_REDIRECT_URI", default_uri)
@@ -120,34 +120,34 @@ class Config:
     @property
     def oauth_encryption_key(self) -> bytes:
         """
-        Obtiene la clave de encriptación para los tokens OAuth.
+        Gets encryption key for OAuth tokens to ensure secure storage.
 
         Returns:
-            Clave de encriptación como bytes
+            Encryption key as bytes
 
         Raises:
-            ValueError: Si no se encuentra la clave
+            ValueError: If key is not found
         """
         key = os.getenv("OAUTH_ENCRYPTION_KEY")
         if not key:
             raise ValueError(
-                "OAUTH_ENCRYPTION_KEY no encontrada en variables de entorno. "
-                'Genera una con: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+                "OAUTH_ENCRYPTION_KEY not found in environment variables. "
+                'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
             )
         return key.encode()
 
     @property
     def database_url(self) -> str:
         """
-        Obtiene la URL de conexión a la base de datos.
+        Gets database connection URL for data persistence.
 
         Returns:
-            URL de conexión a la base de datos
+            Database connection URL
 
         Raises:
-            ValueError: Si no se encuentra la URL
+            ValueError: If URL is not found
         """
         url = os.getenv("DATABASE_URL")
         if not url:
-            raise ValueError("DATABASE_URL no encontrado en variables de entorno")
+            raise ValueError("DATABASE_URL not found in environment variables")
         return url

@@ -1,3 +1,3 @@
 """
-Módulo de configuración del sistema de gestión financiera.
+Configuration module for the financial management system.
 """

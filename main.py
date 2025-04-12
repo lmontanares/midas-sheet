@@ -1,12 +1,11 @@
 """
-Punto de entrada principal de la aplicación de finanzas.
+Main entry point for the finance application.
 
-Este script inicia tanto el bot de Telegram como la conexión con Google Sheets.
+This script initializes both the Telegram bot and the Google Sheets connection.
 """
 
 import functools
 from pathlib import Path
-
 
 from loguru import logger
 from telegram.ext import ApplicationBuilder, ContextTypes
@@ -45,13 +44,11 @@ def main_oauth_callback_handler(
     """
     logger.info(f"Main OAuth callback received. Processing state: {state[:10]}...")
     try:
-        # Exchange code, get user_id if successful. Raises ValueError on invalid state.
         user_id = oauth_manager.exchange_code(state, code)
 
         if user_id:
             logger.info(f"Code exchanged successfully via main callback for user {user_id}")
 
-            # Immediately try to authenticate the gspread client to cache it
             try:
                 client_instance = sheets_client._get_client(user_id)
                 if client_instance:
@@ -61,7 +58,6 @@ def main_oauth_callback_handler(
             except Exception as e:
                 logger.exception(f"Error authenticating sheets_client for user {user_id} immediately after main callback: {e}")
 
-            # Schedule sending the success message back to the user via JobQueue
             if job_queue:
                 job_queue.run_once(
                     _send_auth_success_message,
@@ -80,49 +76,41 @@ def main_oauth_callback_handler(
 
     except ValueError as ve:
         logger.error(f"OAuth state validation failed during main callback: {ve}. State: {state}")
-        raise  # Re-raise for the server to handle
+        raise
     except Exception as e:
         logger.exception(f"Unhandled error processing main OAuth callback (state: {state}): {e}")
-        raise  # Re-raise for the server to handle
+        raise
 
 
 def main() -> None:
     """
-    Función principal que inicia la aplicación.
+    Main function that starts the application.
     """
-    # Configurar logging
     log_dir = Path(__file__).parent / "logs"
     log_dir.mkdir(exist_ok=True)
     setup_logging(log_dir / "app.log")
 
     try:
-        # Cargar configuración
         config = Config()
 
-        # Initialize Database
         init_db()
 
-        # 1. Initialize OAuth Manager
         oauth_manager = OAuthManager(
             client_secrets_file=config.oauth_credentials_path,
             redirect_uri=config.oauth_redirect_uri,
             encryption_key=config.oauth_encryption_key,
         )
-        logger.info("Gestor OAuth inicializado")
+        logger.info("OAuth manager initialized")
 
-        # 2. Initialize Sheets Client
         sheets_client = GoogleSheetsClient(oauth_manager)
-        logger.info("Cliente Google Sheets inicializado")
+        logger.info("Google Sheets client initialized")
 
-        # 3. Initialize Telegram Application
         application = ApplicationBuilder().token(config.telegram_token).build()
-        logger.info("Telegram Application creada")
+        logger.info("Telegram Application created")
 
-        # Add necessary components to bot_data
         application.bot_data["oauth_manager"] = oauth_manager
         application.bot_data["sheets_client"] = sheets_client
 
-        # 4. Create the partial callback function
         callback_with_context = functools.partial(
             main_oauth_callback_handler,
             oauth_manager=oauth_manager,
@@ -130,7 +118,6 @@ def main() -> None:
             job_queue=application.job_queue,
         )
 
-        # 5. Initialize the OAuth server with the partial callback
         oauth_server = OAuthServer(
             host=config.oauth_server_host,
             port=config.oauth_server_port,
@@ -138,36 +125,30 @@ def main() -> None:
             redirect_uri=config.oauth_redirect_uri,
         )
 
-        # Iniciar el servidor OAuth en un hilo separado
         oauth_server.start()
-        logger.info(f"Servidor OAuth iniciado en {config.oauth_server_host}:{config.oauth_server_port}")
+        logger.info(f"OAuth server started at {config.oauth_server_host}:{config.oauth_server_port}")
 
-        # 6. Initialize Sheets Operations
         sheets_operations = SheetsOperations(sheets_client)
-        logger.info("Operaciones de hojas de cálculo inicializadas")
+        logger.info("Spreadsheet operations initialized")
 
-        # 7. Initialize Telegram Bot
         bot = TelegramBot(config.telegram_token, sheets_operations, oauth_manager)
 
-        # Add sheets_operations to bot_data
         application.bot_data["sheets_operations"] = sheets_operations
 
-        # 8. Setup and run the bot using the existing application
         bot.setup(existing_application=application)
-        logger.info("Bot de Telegram configurado, iniciando...")
-        bot.run()  # This blocks until termination
+        logger.info("Telegram bot configured, starting...")
+        bot.run()
 
     except Exception as e:
-        logger.error(f"Error al iniciar la aplicación: {e}")
+        logger.error(f"Error starting the application: {e}")
         raise
     finally:
-        # Asegurar que el servidor OAuth se detenga correctamente
         try:
             if "oauth_server" in locals():
                 oauth_server.stop()
-                logger.info("Servidor OAuth detenido")
+                logger.info("OAuth server stopped")
         except Exception as e:
-            logger.error(f"Error al detener el servidor OAuth: {e}")
+            logger.error(f"Error stopping the OAuth server: {e}")
 
 
 if __name__ == "__main__":

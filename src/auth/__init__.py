@@ -1,3 +1,3 @@
 """
-Módulo de autenticación para el sistema de gestión financiera.
+Authentication module for the financial management system.
 """

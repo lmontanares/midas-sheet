@@ -1,5 +1,5 @@
 """
-Definición de comandos para el bot de Telegram.
+Telegram bot command definitions.
 """
 
 from telegram import BotCommand
@@ -7,10 +7,10 @@ from telegram import BotCommand
 
 def get_commands() -> list[BotCommand]:
     """
-    Retorna la lista de comandos disponibles para el bot.
+    Returns the list of available bot commands for UI discoverability.
 
     Returns:
-        Lista de comandos del bot
+        List of bot commands
     """
     return [
         BotCommand("start", "Inicia el bot"),

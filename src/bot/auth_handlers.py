@@ -1,4 +1,4 @@
-from typing import Optional  # Added import for Optional
+from typing import Optional
 
 from google.auth.exceptions import GoogleAuthError
 from gspread.exceptions import APIError, SpreadsheetNotFound
@@ -10,7 +10,7 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
-from ..auth.oauth import OAuthManager  # Assuming OAuthManager is correctly imported
+from ..auth.oauth import OAuthManager
 from ..db.database import SessionLocal, User, UserSheet
 from ..sheets.operations import SheetsOperations
 
@@ -18,9 +18,9 @@ from ..sheets.operations import SheetsOperations
 
 
 def _upsert_user_details(db: Session, user_id: str, effective_user: Update.effective_user) -> None:
-    """Creates or updates user details in the database."""
+    """Keeps user details updated for persistent contact information."""
     if not effective_user:
-        return  # Cannot update if no user info available
+        return
 
     try:
         stmt = select(User).where(User.user_id == user_id)
@@ -39,9 +39,8 @@ def _upsert_user_details(db: Session, user_id: str, effective_user: Update.effec
                 user.last_name = effective_user.last_name
                 updated = True
             if updated:
-                # updated_at is handled by DB onupdate trigger
                 logger.debug(f"Updating user details in DB for {user_id}")
-                db.flush()  # Flush changes
+                db.flush()
         else:
             # Create new user (should ideally be created during initial auth exchange)
             logger.warning(f"User {user_id} not found during detail upsert. Creating.")
@@ -52,18 +51,18 @@ def _upsert_user_details(db: Session, user_id: str, effective_user: Update.effec
                 last_name=effective_user.last_name,
             )
             db.add(new_user)
-            db.flush()  # Flush to make user available
+            db.flush()
 
     except Exception as e:
         logger.error(f"Error upserting user details for {user_id}: {e}")
-        db.rollback()  # Rollback on error
-        # Decide whether to raise or just log
+        db.rollback()
 
 
 def _set_active_sheet(db: Session, user_id: str, spreadsheet_id: str, spreadsheet_title: Optional[str]) -> bool:
-    """Sets the active spreadsheet for the user in the database."""
+    """Sets active spreadsheet in database for persistent user preferences."""
     try:
         # Deactivate any existing active sheets for this user first
+
         stmt_deactivate = (
             update(UserSheet)
             .where(UserSheet.user_id == user_id, UserSheet.is_active == True)  # noqa: E712
@@ -108,9 +107,8 @@ def _set_active_sheet(db: Session, user_id: str, spreadsheet_id: str, spreadshee
 
 async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Handles the /auth command to initiate the OAuth 2.0 flow.
-    Generates an authorization link and sends it to the user.
-    Ensures user details are updated in the DB.
+    Initiates OAuth 2.0 flow for secure Google Sheets access.
+    Generates authorization link and updates user details in DB.
     """
     if not update.effective_user or not update.message:
         logger.warning("Cannot process /auth: effective_user or message is None.")
@@ -121,9 +119,7 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     if not oauth_manager:
         logger.error("OAuthManager not found in bot_data.")
-        await update.message.reply_text(
-            "Error interno: El servicio de autenticación no está configurado correctamente. Por favor, contacta al administrador."
-        )
+        await update.message.reply_text("Internal error: Authentication service is not properly configured. Please contact the administrator.")
         return
 
     # Upsert user details (username, name) every time /auth is called
@@ -131,10 +127,9 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     try:
         db = SessionLocal()
         _upsert_user_details(db, user_id, update.effective_user)
-        db.commit()  # Commit user detail changes
+        db.commit()
     except Exception as e:
         logger.error(f"Failed to upsert user details for {user_id} during /auth: {e}")
-        # Continue with auth flow even if user detail update fails
         if db:
             db.rollback()
     finally:
@@ -143,13 +138,12 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     # Check if already authenticated
     if oauth_manager.is_authenticated(user_id):
-        await update.message.reply_text("Ya estás autenticado 👍. Puedes usar /sheet <ID> para seleccionar una hoja o /logout para desconectar.")
+        await update.message.reply_text("You're already authenticated 👍. You can use /sheet <ID> to select a sheet or /logout to disconnect.")
         return
 
     try:
         # Generate URL (state is handled internally by OAuthManager now)
         auth_url, state = oauth_manager.generate_auth_url(user_id)
-        # State is logged within generate_auth_url now
 
         # Send link to user
         await update.message.reply_text(
@@ -161,7 +155,7 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             f"[Autorizar Acceso a Google Sheets]({auth_url})\n\n"
             f"_Este enlace es único y válido por un corto tiempo._",
             parse_mode=ParseMode.MARKDOWN,
-            disable_web_page_preview=True,  # Good practice for auth links
+            disable_web_page_preview=True,
         )
         logger.info(f"Authorization link sent to user {user_id}")
 
@@ -173,7 +167,7 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles the /sheet command to select an active spreadsheet and store it in the DB."""
+    """Sets active spreadsheet and verifies access for user transactions."""
     if not update.effective_user or not update.message:
         return
     user_id = str(update.effective_user.id)
@@ -199,7 +193,7 @@ async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     try:
         wait_message = await update.message.reply_text(f"Verificando y configurando hoja '{spreadsheet_id}'...")
 
-        # setup_for_user now only verifies access and returns the title
+        # Verify access and get title
         spreadsheet_title = sheets_operations.setup_for_user(user_id, spreadsheet_id)
 
         if spreadsheet_title:
@@ -207,9 +201,6 @@ async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             db = SessionLocal()
             success = _set_active_sheet(db, user_id, spreadsheet_id, spreadsheet_title)
             if success:
-                # context.user_data["active_spreadsheet_id"] = spreadsheet_id # Removed
-                # context.user_data["active_spreadsheet_title"] = spreadsheet_title # Removed
-
                 await wait_message.edit_text(
                     f"✅ Hoja de cálculo *{spreadsheet_title}* seleccionada.\n\nAhora puedes usar comandos como /agregar en esta hoja.",
                     parse_mode=ParseMode.MARKDOWN,
@@ -221,8 +212,6 @@ async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 )
 
         else:
-            # This case implies setup_for_user returned None (likely auth issue handled internally)
-            # Error should have been raised by setup_for_user if it was API/NotFound
             await wait_message.edit_text(
                 f"❌ No se pudo verificar el acceso a la hoja con ID: {spreadsheet_id}. Asegúrate de estar autenticado (/auth) y tener permisos."
             )
@@ -260,20 +249,19 @@ async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def logout_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles the /logout command to revoke access and clear local/DB data."""
+    """Revokes access and clears database data for security and clean state."""
     if not update.effective_user or not update.message:
         return
     user_id = str(update.effective_user.id)
     oauth_manager: OAuthManager | None = context.bot_data.get("oauth_manager")
-    sheets_client = context.bot_data.get("sheets_client")  # Keep for cache clearing
+    sheets_client = context.bot_data.get("sheets_client")
 
     if not oauth_manager:
         logger.error("OAuthManager not found in bot_data for /logout.")
         await update.message.reply_text("Error interno: Servicio no disponible.")
         return
 
-    # Check if authenticated *before* attempting logout
-    # No need to check token file existence anymore
+    # Check if authenticated before attempting logout
     is_auth = oauth_manager.is_authenticated(user_id)
     if not is_auth:
         # Check if a token exists in DB anyway (maybe expired/invalid)
@@ -294,18 +282,6 @@ async def logout_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             logger.info(f"Token revocation/cleanup successful for user {user_id}")
         else:
             logger.warning(f"Token revocation/cleanup might have failed for user {user_id}, but proceeding with local data clear.")
-
-        # --- Clear local user data ---
-        # Clear selected sheet from user_data (REMOVED)
-        # cleared_keys = []
-        # if "active_spreadsheet_id" in context.user_data:
-        #     del context.user_data["active_spreadsheet_id"]
-        #     cleared_keys.append("active_spreadsheet_id")
-        # if "active_spreadsheet_title" in context.user_data:
-        #     del context.user_data["active_spreadsheet_title"]
-        #     cleared_keys.append("active_spreadsheet_title")
-        # if cleared_keys:
-        #     logger.debug(f"Cleared keys from user_data for {user_id}: {cleared_keys}")
 
         # Deactivate user sheet association in DB
         try:
@@ -334,8 +310,6 @@ async def logout_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         else:
             logger.debug("SheetsClient or clear_user_cache method not found, skipping cache clear.")
 
-        # sheets_operations.clear_user_data() was removed
-
         await update.message.reply_text(
             "✅ Has cerrado sesión correctamente.\n\n"
             "El acceso a tu cuenta de Google ha sido revocado para este bot, "
@@ -353,7 +327,7 @@ async def logout_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def _send_auth_success_message(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Job to send the success message after OAuth callback."""
+    """Sends success message after OAuth callback for better user experience."""
     job_data = context.job.data if context.job else {}
     user_id = job_data.get("user_id")
     if not user_id:
@@ -372,5 +346,4 @@ async def _send_auth_success_message(context: ContextTypes.DEFAULT_TYPE) -> None
             parse_mode=ParseMode.MARKDOWN,
         )
     except Exception as e:
-        # Catch specific Telegram errors if needed (e.g., BadRequest if user blocked bot)
         logger.error(f"Failed to send auth success message to user {user_id}: {e}")

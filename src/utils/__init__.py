@@ -1,3 +1,3 @@
 """
-Utilidades comunes para el proyecto.
+Common utilities for the project.
 """

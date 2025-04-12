@@ -1,3 +1,3 @@
 """
-Módulo para interactuar con Google Sheets.
+Module for interacting with Google Sheets.
 """

@@ -15,8 +15,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-# Assuming database.py is in the parent directory relative to this file's location in src/auth
-# Adjust the import path if necessary based on your final project structure
 from ..db.database import AuthToken, SessionLocal, User
 
 
@@ -44,7 +42,7 @@ class OAuthManager:
         encryption_key: bytes,
     ) -> None:
         """
-        Initializes the OAuth manager.
+        Initializes the OAuth manager with necessary configuration for secure token handling.
 
         Args:
             client_secrets_file: Path to the OAuth client secrets JSON file.
@@ -83,7 +81,7 @@ class OAuthManager:
 
     def generate_auth_url(self, user_id: str) -> tuple[str, str]:
         """
-        Generates a secure authorization URL for a user.
+        Generates a secure authorization URL for a user to protect against CSRF attacks.
 
         Args:
             user_id: Unique ID of the user.
@@ -98,7 +96,7 @@ class OAuthManager:
         try:
             flow = Flow.from_client_secrets_file(self.client_secrets_file, scopes=self.SCOPES, redirect_uri=self.redirect_uri)
 
-            # Generate a cryptographically secure state parameter
+            # Generate a cryptographically secure state parameter to prevent CSRF attacks
             state = secrets.token_urlsafe(32)
             self._pending_states[state] = user_id
 
@@ -106,7 +104,7 @@ class OAuthManager:
                 access_type="offline",
                 include_granted_scopes="true",
                 prompt="consent",
-                state=state,  # Use the secure state
+                state=state,
             )
 
             logger.info(f"Authorization URL generated for user {user_id} with state {state}")
@@ -117,34 +115,33 @@ class OAuthManager:
             raise
         except Exception as e:
             logger.error(f"Error generating authorization URL for user {user_id}: {e}")
-            # Clean up potentially stored state if URL generation failed mid-way
+            # Clean up potentially stored state if URL generation failed
             if "state" in locals() and state in self._pending_states:
                 del self._pending_states[state]
             raise
 
     def _upsert_user(self, db: Session, user_id: str) -> None:
-        """Creates or updates a user entry in the database."""
+        """Creates or updates a user entry to ensure database integrity before token storage."""
         try:
             stmt = select(User).where(User.user_id == user_id)
             existing_user = db.scalars(stmt).first()
 
             if existing_user:
-                # Optionally update fields like updated_at if needed, but not strictly necessary here
                 logger.debug(f"User {user_id} already exists in the database.")
             else:
                 logger.info(f"User {user_id} not found, creating new entry.")
-                new_user = User(user_id=user_id)  # Add other fields if available
+                new_user = User(user_id=user_id)
                 db.add(new_user)
-                db.flush()  # Flush to ensure user exists before token insertion
+                db.flush()
                 logger.info(f"User {user_id} created successfully.")
         except Exception as e:
             logger.error(f"Error upserting user {user_id}: {e}")
-            db.rollback()  # Rollback on error during user upsert
-            raise  # Re-raise the exception to be caught by the caller
+            db.rollback()
+            raise
 
     def exchange_code(self, state: str, code: str) -> str | None:
         """
-        Exchanges an authorization code for tokens using the provided state.
+        Exchanges an authorization code for tokens with security validation.
         Ensures the user exists in the DB before saving the token.
 
         Args:
@@ -166,11 +163,9 @@ class OAuthManager:
 
         db: Session | None = None
         try:
-            # Create a new flow object for the exchange
             flow = Flow.from_client_secrets_file(self.client_secrets_file, scopes=self.SCOPES, redirect_uri=self.redirect_uri)
-            flow.oauth2session.state = state  # Set the state for validation by the library
+            flow.oauth2session.state = state
 
-            # Exchange code for tokens
             flow.fetch_token(code=code)
 
             credentials = flow.credentials
@@ -179,18 +174,14 @@ class OAuthManager:
                 "refresh_token": credentials.refresh_token,
                 "token_uri": credentials.token_uri,
                 "client_id": credentials.client_id,
-                # DO NOT store client_secret here
                 "scopes": credentials.scopes,
-                # Store expiry for potential proactive refresh checks (optional)
                 "expiry": credentials.expiry.isoformat() if credentials.expiry else None,
             }
 
-            # --- Database Interaction ---
             db = SessionLocal()
-            self._upsert_user(db, user_id)  # Ensure user exists before saving token
-            self.save_token(user_id, token_data, db_session=db)  # Pass the existing session
-            db.commit()  # Commit both user upsert and token save
-            # --- End Database Interaction ---
+            self._upsert_user(db, user_id)
+            self.save_token(user_id, token_data, db_session=db)
+            db.commit()
 
             logger.info(f"Authorization code exchanged successfully for user {user_id}")
             return user_id
@@ -198,8 +189,7 @@ class OAuthManager:
         except Exception as e:
             logger.error(f"Error exchanging code for user {user_id} (state: {state}): {e}")
             if db:
-                db.rollback()  # Rollback any DB changes if exchange fails
-            # State was already popped, no need to clean _pending_states here
+                db.rollback()
             raise
         finally:
             if db:
@@ -207,7 +197,7 @@ class OAuthManager:
 
     def get_credentials(self, user_id: str) -> Credentials | None:
         """
-        Loads, decrypts, and potentially refreshes credentials for a user from the database.
+        Loads, decrypts, and refreshes credentials to ensure valid API access.
 
         Args:
             user_id: Unique ID of the user.
@@ -226,52 +216,43 @@ class OAuthManager:
                 refresh_token=token_data.get("refresh_token"),
                 token_uri=token_data.get("token_uri"),
                 client_id=token_data.get("client_id"),
-                # Client secret is loaded from the secrets file by the library if needed
                 client_secret=self._get_client_secret(),
                 scopes=token_data.get("scopes"),
             )
 
-            # Check if token needs refreshing
             if credentials.expired and credentials.refresh_token:
                 logger.info(f"Token expired for user {user_id}, attempting refresh.")
                 try:
-                    # Use google.auth.transport.requests for refresh
                     request = GoogleAuthRequest()
                     credentials.refresh(request)
                     logger.info(f"Token refreshed successfully for user {user_id}")
 
-                    # Save the updated token data (including potentially new access token and expiry)
                     refreshed_token_data = {
                         "token": credentials.token,
-                        "refresh_token": credentials.refresh_token,  # Usually stays the same
+                        "refresh_token": credentials.refresh_token,
                         "token_uri": credentials.token_uri,
                         "client_id": credentials.client_id,
                         "scopes": credentials.scopes,
                         "expiry": credentials.expiry.isoformat() if credentials.expiry else None,
                     }
-                    self.save_token(user_id, refreshed_token_data)  # Save updated token to DB
+                    self.save_token(user_id, refreshed_token_data)
 
                 except RefreshError as re:
                     logger.error(f"Failed to refresh token for user {user_id}: {re}")
-                    # Token is invalid, revoke and delete from DB
-                    self.revoke_token(user_id, token_to_revoke=credentials.refresh_token)  # Revoke refresh token
+                    self.revoke_token(user_id, token_to_revoke=credentials.refresh_token)
                     return None
                 except Exception as e:
                     logger.error(f"Unexpected error during token refresh for user {user_id}: {e}")
-                    # Don't revoke here, might be a temporary network issue
-                    return None  # Indicate failure
+                    return None
 
-            # Return valid credentials (original or refreshed)
             if credentials.valid:
                 return credentials
             else:
-                # This case might happen if the token was invalid but didn't trigger RefreshError
                 logger.warning(f"Credentials for user {user_id} are invalid after load/refresh attempt.")
                 return None
 
         except KeyError as ke:
             logger.error(f"Missing key in token data loaded from DB for user {user_id}: {ke}")
-            # Corrupted data in DB? Log error. Deletion might be too aggressive here.
             return None
         except Exception as e:
             logger.error(f"Error processing credentials for user {user_id}: {e}")
@@ -279,7 +260,7 @@ class OAuthManager:
 
     def revoke_token(self, user_id: str, token_to_revoke: str | None = None) -> bool:
         """
-        Revokes Google API access for the user and deletes the token from the database.
+        Revokes Google API access for security and removes local token storage.
 
         Args:
             user_id: Unique ID of the user.
@@ -292,9 +273,8 @@ class OAuthManager:
         db: Session | None = None
         token_data = None
         if not token_to_revoke:
-            token_data = self.load_token(user_id)  # Load to get refresh token if needed
+            token_data = self.load_token(user_id)
 
-        # Attempt to revoke the token with Google
         token = token_to_revoke or (token_data.get("refresh_token") if token_data else None)
 
         revocation_success = False
@@ -304,9 +284,9 @@ class OAuthManager:
                     self.REVOCATION_ENDPOINT,
                     params={"token": token},
                     headers={"Content-Type": "application/x-www-form-urlencoded"},
-                    timeout=10,  # Add a timeout
+                    timeout=10,
                 )
-                response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+                response.raise_for_status()
 
                 if response.status_code == 200:
                     logger.info(f"Token successfully revoked with Google for user {user_id}")
@@ -320,7 +300,6 @@ class OAuthManager:
             except Exception as e:
                 logger.error(f"Unexpected error during token revocation API call for user {user_id}: {e}")
 
-        # Always attempt to delete the local token from the database
         deleted_local = False
         try:
             db = SessionLocal()
@@ -332,7 +311,6 @@ class OAuthManager:
                 logger.info(f"Local token deleted from database for user {user_id}")
             else:
                 logger.warning(f"No local token found in database to delete for user {user_id}.")
-                # If revocation succeeded but no local token found, still consider it a success overall
                 deleted_local = revocation_success
 
         except Exception as e:
@@ -348,15 +326,11 @@ class OAuthManager:
         elif not deleted_local:
             logger.warning(f"Could not delete local token for user {user_id}, but Google revocation might have succeeded.")
 
-        # Return True if either Google revocation succeeded or local DB deletion succeeded
         return revocation_success or deleted_local
-
-    # Removed _delete_token_file method
 
     def save_token(self, user_id: str, token_data: dict[str, Any], db_session: Session | None = None) -> None:
         """
-        Encrypts and saves token data to the database for the user.
-        Can use an existing session or create a new one.
+        Encrypts and saves token data to ensure security and persistence.
 
         Args:
             user_id: Unique ID of the user.
@@ -365,7 +339,6 @@ class OAuthManager:
         """
         db: Session | None = None
         try:
-            # Ensure refresh token exists before saving (critical)
             if not token_data.get("refresh_token"):
                 logger.warning(f"Attempted to save token for user {user_id} without a refresh token. Aborting save.")
                 return
@@ -373,37 +346,30 @@ class OAuthManager:
             token_json = json.dumps(token_data).encode("utf-8")
             encrypted_token_bytes = self.fernet.encrypt(token_json)
 
-            # Extract expiry and convert to datetime object if present
             expiry_iso = token_data.get("expiry")
             token_expiry_dt: datetime.datetime | None = None
             if expiry_iso:
                 try:
-                    # Handle potential timezone info (e.g., 'Z' or +HH:MM) if present
                     if expiry_iso.endswith("Z"):
                         expiry_iso = expiry_iso[:-1] + "+00:00"
                     token_expiry_dt = datetime.datetime.fromisoformat(expiry_iso)
                 except ValueError:
                     logger.warning(f"Could not parse expiry date '{expiry_iso}' for user {user_id}. Storing as None.")
 
-            # Use provided session or create a new one
             if db_session:
                 db = db_session
-                manage_session = False  # Don't commit/close if session is managed externally
+                manage_session = False
             else:
                 db = SessionLocal()
                 manage_session = True
 
-            # Check if token exists
             existing_token = db.get(AuthToken, user_id)
 
             if existing_token:
-                # Update existing token
                 existing_token.encrypted_token = encrypted_token_bytes
                 existing_token.token_expiry = token_expiry_dt
-                # updated_at is handled by onupdate=func.now()
                 logger.debug(f"Updating existing token in database for user {user_id}")
             else:
-                # Insert new token
                 new_token = AuthToken(
                     user_id=user_id,
                     encrypted_token=encrypted_token_bytes,
@@ -415,12 +381,11 @@ class OAuthManager:
             if manage_session:
                 db.commit()
             else:
-                db.flush()  # Flush to ensure data is ready if session is managed externally
+                db.flush()
 
             logger.info(f"Encrypted token saved to database for user {user_id}")
 
         except IntegrityError as ie:
-            # Should be rare if _upsert_user is called first in exchange_code
             logger.error(f"Database integrity error saving token for user {user_id}: {ie}")
             if manage_session and db:
                 db.rollback()
@@ -441,7 +406,7 @@ class OAuthManager:
 
     def load_token(self, user_id: str) -> dict[str, Any] | None:
         """
-        Loads and decrypts token data from the database for a user.
+        Loads and decrypts token data to enable secure API access.
 
         Args:
             user_id: Unique ID of the user.
@@ -464,12 +429,10 @@ class OAuthManager:
 
         except InvalidToken:
             logger.error(f"Failed to decrypt token for user {user_id}. Key mismatch or corrupted data in database.")
-            # Delete the corrupted/unreadable token from the DB
             self._delete_invalid_token_entry(user_id)
             return None
         except json.JSONDecodeError as e:
             logger.error(f"Error parsing decrypted token JSON for user {user_id}: {e}")
-            # Consider deleting corrupted entry?
             return None
         except Exception as e:
             logger.error(f"Unexpected error loading token from database for user {user_id}: {e}")
@@ -479,7 +442,7 @@ class OAuthManager:
                 db.close()
 
     def _delete_invalid_token_entry(self, user_id: str) -> None:
-        """Deletes a specific token entry from the database, usually due to corruption."""
+        """Deletes corrupted token entries to maintain database integrity."""
         db: Session | None = None
         try:
             db = SessionLocal()
@@ -497,7 +460,7 @@ class OAuthManager:
 
     def is_authenticated(self, user_id: str) -> bool:
         """
-        Checks if a user has valid, non-expired credentials stored in the database.
+        Checks authentication status to ensure API access is available.
 
         Args:
             user_id: Unique ID of the user.
@@ -506,7 +469,4 @@ class OAuthManager:
             True if the user has valid credentials, False otherwise.
         """
         credentials = self.get_credentials(user_id)
-        # get_credentials handles refresh, so we just check validity
         return credentials is not None and credentials.valid
-
-    # Removed _get_token_path method

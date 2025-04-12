@@ -1,4 +1,4 @@
 """
-Módulo principal del proyecto de finanzas.
-Integra un bot de Telegram y funcionalidades para Google Sheets.
+Main finance project module.
+Integrates a Telegram bot with Google Sheets functionality.
 """

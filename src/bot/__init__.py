@@ -1,3 +1,3 @@
 """
-Módulo para la funcionalidad del bot de Telegram.
+Module for Telegram bot functionality.
 """

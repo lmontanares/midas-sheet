@@ -1,5 +1,5 @@
 """
-Módulo para la gestión de categorías del sistema financiero.
+Module for managing financial system categories.
 """
 
 from pathlib import Path
@@ -10,26 +10,24 @@ from loguru import logger
 
 class CategoryManager:
     """
-    Gestor de categorías para el sistema financiero.
+    Category manager for the financial system.
 
-    Esta clase se encarga de cargar y proporcionar acceso a las categorías
-    de gastos e ingresos definidas en un archivo YAML.
+    This class is responsible for loading and providing access to expense
+    and income categories defined in a YAML file.
     """
 
     def __init__(self, config_path: Path | str | None = None):
         """
-        Inicializa el gestor de categorías.
+        Initializes the category manager with a configuration file.
 
         Args:
-            config_path: Ruta al archivo YAML de configuración de categorías.
-                         Si es None, se utilizará la ruta predeterminada.
+            config_path: Path to the categories YAML configuration file.
+                         If None, the default path will be used.
         """
         if config_path is None:
-            # Obtener la ruta absoluta del directorio actual usando Path
             base_dir = Path(__file__).parent.parent
             config_path = base_dir / "config" / "categories.yaml"
 
-        # Asegurar que config_path sea un objeto Path
         self.config_path = Path(config_path)
         self._expense_categories: dict[str, list[str]] = {}
         self._income_categories: list[str] = []
@@ -37,88 +35,86 @@ class CategoryManager:
 
     def _load_categories(self) -> None:
         """
-        Carga las categorías desde el archivo YAML.
+        Loads categories from YAML file for system configuration.
 
         Raises:
-            FileNotFoundError: Si no se encuentra el archivo de configuración.
-            yaml.YAMLError: Si el archivo YAML tiene un formato incorrecto.
+            FileNotFoundError: If configuration file is not found.
+            yaml.YAMLError: If YAML file has incorrect format.
         """
         try:
             with self.config_path.open("r", encoding="utf-8") as file:
                 config = yaml.safe_load(file)
 
-                # Cargar categorías de gastos
                 self._expense_categories = config.get("expense_categories", {})
 
-                # Cargar categorías de ingresos
                 self._income_categories = config.get("income_categories", [])
 
-            logger.info(f"Categorías cargadas correctamente desde {self.config_path}")
-            logger.debug(f"Categorías de gastos: {len(self._expense_categories)}, Categorías de ingresos: {len(self._income_categories)}")
+            logger.info(f"Categories successfully loaded from {self.config_path}")
+            logger.debug(f"Expense categories: {len(self._expense_categories)}, Income categories: {len(self._income_categories)}")
 
         except FileNotFoundError:
-            logger.error(f"No se encontró el archivo de configuración: {self.config_path}")
+            logger.error(f"Configuration file not found: {self.config_path}")
             raise
         except yaml.YAMLError as e:
-            logger.error(f"Error al parsear el archivo YAML: {e}")
+            logger.error(f"Error parsing YAML file: {e}")
             raise
         except Exception as e:
-            logger.error(f"Error inesperado al cargar categorías: {e}")
+            logger.error(f"Unexpected error loading categories: {e}")
             raise
 
     @property
     def expense_categories(self) -> dict[str, list[str]]:
         """
-        Obtiene las categorías de gastos.
+        Gets expense categories for transaction categorization.
 
         Returns:
-            Diccionario con las categorías de gastos y sus subcategorías.
+            Dictionary with expense categories and their subcategories.
         """
         return self._expense_categories
 
     @property
     def income_categories(self) -> list[str]:
         """
-        Obtiene las categorías de ingresos.
+        Gets income categories for transaction categorization.
 
         Returns:
-            Lista con las categorías de ingresos.
+            List with income categories.
         """
         return self._income_categories
 
     def get_expense_category_names(self) -> list[str]:
         """
-        Obtiene los nombres de las categorías de gastos.
+        Gets expense category names for UI display.
 
         Returns:
-            Lista con los nombres de las categorías de gastos.
+            List with expense category names.
         """
         return list(self._expense_categories.keys())
 
     def get_subcategories(self, category: str) -> list[str]:
         """
-        Obtiene las subcategorías de una categoría de gastos.
+        Gets subcategories of an expense category for detailed classification.
 
         Args:
-            category: Nombre de la categoría principal.
+            category: Main category name.
 
         Returns:
-            Lista con las subcategorías de la categoría especificada.
-            Lista vacía si la categoría no existe.
+            List with subcategories of the specified category.
+            Empty list if category doesn't exist.
         """
         return self._expense_categories.get(category, [])
 
     def reload_categories(self) -> None:
         """
-        Recarga las categorías desde el archivo YAML.
+        Reloads categories from YAML file for dynamic configuration.
 
-        Útil cuando se ha modificado el archivo de configuración.
+        Useful when the configuration file has been modified.
 
         Raises:
-            Mismo que _load_categories().
+            Same as _load_categories().
         """
         self._load_categories()
 
 
-# Instancia global del gestor de categorías para uso en toda la aplicación
+# Global instance of category manager for use throughout the application
 category_manager = CategoryManager()
