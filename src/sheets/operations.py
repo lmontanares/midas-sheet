@@ -198,7 +198,7 @@ class SheetsOperations:
                 return False
 
             worksheet.append_row(values)
-            logger.info(f"Data appended to sheet '{sheet_name}' for user {user_id}: {values}")
+            logger.info(f"Data appended to sheet '{sheet_name}' for user {user_id}")
             return True
         except Exception as e:
             logger.error(f"Failed to append row to sheet '{sheet_name}' for user {user_id}: {e}")
