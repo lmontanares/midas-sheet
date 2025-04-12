@@ -8,18 +8,16 @@ from telegram.ext import Application, CallbackQueryHandler, CommandHandler, Mess
 from ..auth.oauth import OAuthManager
 from ..sheets.client import GoogleSheetsClient
 from ..sheets.operations import SheetsOperations
+from .auth_handlers import auth_command, logout_command, sheet_command
 from .handlers import (
     add_command,
     amount_handler,
-    auth_command,
     button_callback,
     comment_handler,
     error_handler,
     help_command,
-    logout_command,
     register_bot_commands,
     reload_command,
-    sheet_command,
     start_command,
 )
 
