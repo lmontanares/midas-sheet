@@ -1,5 +1,3 @@
-from typing import Optional
-
 from google.auth.exceptions import GoogleAuthError
 from gspread.exceptions import APIError, SpreadsheetNotFound
 from loguru import logger
@@ -58,7 +56,7 @@ def _upsert_user_details(db: Session, user_id: str, effective_user: Update.effec
         db.rollback()
 
 
-def _set_active_sheet(db: Session, user_id: str, spreadsheet_id: str, spreadsheet_title: Optional[str]) -> bool:
+def _set_active_sheet(db: Session, user_id: str, spreadsheet_id: str, spreadsheet_title: str | None) -> bool:
     """Sets active spreadsheet in database for persistent user preferences."""
     try:
         # Deactivate any existing active sheets for this user first
@@ -115,7 +113,7 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     user_id = str(update.effective_user.id)
-    oauth_manager: Optional[OAuthManager] = context.bot_data.get("oauth_manager")
+    oauth_manager: OAuthManager | None = context.bot_data.get("oauth_manager")
 
     if not oauth_manager:
         logger.error("OAuthManager not found in bot_data.")
@@ -171,8 +169,8 @@ async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not update.effective_user or not update.message:
         return
     user_id = str(update.effective_user.id)
-    sheets_operations: Optional[SheetsOperations] = context.bot_data.get("sheets_operations")
-    oauth_manager: Optional[OAuthManager] = context.bot_data.get("oauth_manager")
+    sheets_operations: SheetsOperations | None = context.bot_data.get("sheets_operations")
+    oauth_manager: OAuthManager | None = context.bot_data.get("oauth_manager")
 
     if not sheets_operations or not oauth_manager:
         logger.error("SheetsOperations or OAuthManager not found in bot_data for /sheet.")
