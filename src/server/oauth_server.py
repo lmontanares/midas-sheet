@@ -1,4 +1,3 @@
-import signal
 import threading
 import webbrowser
 from typing import Callable
