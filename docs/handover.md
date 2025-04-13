@@ -1,108 +1,111 @@
-# Documento de Transferencia: Sistema de Gestión Financiera v3.1
+# Handover Document: Financial Management System v3.2
 
-## 1. Visión general del proyecto
+## 1. Project Overview
 
-### Propósito fundamental y objetivos principales
-El Sistema de Gestión Financiera es una aplicación diseñada para facilitar el seguimiento y control de finanzas personales a través de un bot de Telegram integrado con Google Sheets. El objetivo principal es proporcionar una herramienta accesible que permita a los usuarios registrar y consultar sus ingresos y gastos de manera sencilla desde cualquier dispositivo con Telegram.
+### Core Purpose and Main Objectives
+The Financial Management System is an application designed to facilitate tracking and control of personal finances through a Telegram bot integrated with Google Sheets. The main objective is to provide an accessible tool that allows users to record and query their income and expenses easily from any device with Telegram.
 
-### Descripción de la funcionalidad central
-El sistema consta de dos componentes principales que trabajan de forma integrada:
-1. Un bot de Telegram que sirve como interfaz de usuario para registrar transacciones financieras y consultar información.
-2. Un módulo de integración con Google Sheets que almacena y gestiona los datos financieros en la nube.
+### Description of Core Functionality
+The system consists of two main components that work together:
+1. A Telegram bot that serves as a user interface for recording financial transactions and querying information.
+2. A Google Sheets integration module that stores and manages financial data in the cloud.
 
-El usuario interactúa con el bot siguiendo un flujo específico para registrar transacciones:
-1. El usuario se autentica con su cuenta de Google usando OAuth 2.0 (`/auth`)
-2. Selecciona una de sus hojas de cálculo directamente con el comando (`/sheet`)
-3. Inicia el registro de transacción con el comando `/agregar`
-4. Elige tipo de transacción (ingreso o egreso)
-5. Selecciona una categoría
-6. Si seleccionó un egreso, selecciona una subcategoría (los ingresos no tienen subcategorías)
-7. Ingresa el monto de la transacción
-8. Decide si desea agregar un comentario opcional (con botones Sí/No)
-9. Si eligió añadir comentario, lo escribe; si no, se registra sin comentario
-10. El sistema registra la transacción en la hoja de cálculo correspondiente
+The user interacts with the bot following a specific flow to record transactions:
+1. The user authenticates with their Google account using OAuth 2.0 (`/auth`)
+2. They select one of their spreadsheets directly with the (`/sheet`) command
+3. They initiate transaction recording with the `/agregar` (add) command
+4. They choose the transaction type (income or expense)
+5. They select a category
+6. If they selected an expense, they select a subcategory (incomes don't have subcategories)
+7. They enter the transaction amount
+8. They decide whether to add an optional comment (with Yes/No buttons)
+9. If they chose to add a comment, they write it; if not, it's recorded without a comment
+10. The system records the transaction in the corresponding spreadsheet
 
-### Problemas que resuelve y valor que aporta
-- Simplifica el registro de gastos e ingresos sin necesidad de aplicaciones complejas
-- Permite acceder y gestionar información financiera desde cualquier dispositivo con Telegram
-- Centraliza los datos financieros en Google Sheets, facilitando análisis posteriores
-- Elimina la necesidad de herramientas costosas o complejas de finanzas personales
-- Proporciona una estructura jerárquica para categorizar gastos, facilitando análisis detallados
-- Permite contextualizar transacciones mediante el campo de comentarios opcional
-- Interfaz guiada mediante botones que simplifica la experiencia de usuario
-- Permite a cada usuario trabajar con sus propias hojas de cálculo gracias a OAuth 2.0
-- Protege la privacidad de los datos al no requerir compartir hojas con el bot
-- **Garantiza la seguridad de las credenciales mediante encriptación de tokens**
+### Problems It Solves and Value It Provides
+- Simplifies recording expenses and income without requiring complex applications
+- Allows access and management of financial information from any device with Telegram
+- Centralizes financial data in Google Sheets, facilitating later analysis
+- Eliminates the need for expensive or complex personal finance tools
+- Provides a hierarchical structure to categorize expenses, facilitating detailed analysis
+- Allows contextualizing transactions through an optional comment field
+- Guided interface using buttons that simplifies the user experience
+- Allows each user to work with their own spreadsheets thanks to OAuth 2.0
+- Protects data privacy by not requiring sharing sheets with the bot
+- **Ensures credential security through token encryption**
 
-## 2. Ecosistema tecnológico
+## 2. Technological Ecosystem
 
-### Lenguajes de programación utilizados
-- Python 3.9+ (aprovechando características modernas de tipado)
+### Programming Languages Used
+- Python 3.13+ (leveraging modern typing features)
 
-### Sistema de tipado (Type Hints)
-El proyecto hace uso extensivo del sistema de tipado estático de Python 3.9+, aprovechando las características modernas:
+### Type Hints System
+The project makes extensive use of Python 3.9+ static typing system, taking advantage of modern features:
 
-- **Uso directo de tipos contenedores integrados** sin importaciones desde typing:
+- **Direct use of built-in container types** without imports from typing:
   ```python
-  # Correcto - usando tipado moderno (Python 3.9+)
+  # Correct - using modern typing (Python 3.9+)
   users: list[str] = []
   config: dict[str, str] = {}
   ```
 
-- **Operador de unión `|` para tipos múltiples**:
+- **Union operator `|` for multiple types**:
   ```python
-  # Correcto - usando operador | (Python 3.9+)
+  # Correct - using | operator (Python 3.9+)
   def process_amount(amount: str | float | int) -> float:
-      # Implementación
+      # Implementation
   ```
 
-- **Importación específica de `Any` cuando sea necesario**:
+- **Specific import of `Any` when necessary**:
   ```python
   from typing import Any
 
   def get_metadata() -> dict[str, Any]:
-      # Implementación
+      # Implementation
   ```
 
-Todos los métodos y funciones públicas incluyen anotaciones de tipo completas, mejorando la documentación, facilitando el desarrollo y permitiendo la verificación estática de tipos.
+All public methods and functions include complete type annotations, improving documentation, facilitating development, and enabling static type checking.
 
-### Frameworks, bibliotecas y dependencias principales
-- **Bot de Telegram:**
-  - python-telegram-bot (v20.6+): Framework para la creación del bot
+### Frameworks, Libraries, and Main Dependencies
+- **Telegram Bot:**
+  - python-telegram-bot (v22.0): Framework for creating the bot
 - **Google Sheets:**
-  - gspread: Biblioteca para interactuar con Google Sheets
-  - google-auth: Autenticación base con servicios de Google
-  - google-auth-oauthlib: Autenticación OAuth 2.0 con Google
-  - google-auth-httplib2: Gestión de solicitudes HTTP autenticadas
-- **Servidor OAuth:**
-  - Flask: Servidor web ligero para manejar redirecciones OAuth
-- **Seguridad:**
-  - **cryptography**: Para encriptación y desencriptación de tokens
-  - **hashlib**: Para el hashing de identificadores de usuario
-  - **secrets**: Para generación segura de tokens de estado
-- **Configuración y Datos:**
-  - pyyaml: Para manejo de archivos de configuración YAML
-- **Utilidades:**
-  - loguru: Sistema avanzado de logging
-  - python-dotenv: Gestión de variables de entorno
-  - pydantic: Validación de datos
-  - pathlib: Manejo de rutas de archivos de forma moderna
+  - gspread: Library for interacting with Google Sheets
+  - google-auth: Base authentication with Google services
+  - google-auth-oauthlib: OAuth 2.0 authentication with Google
+  - google-auth-httplib2: Management of authenticated HTTP requests
+- **OAuth Server:**
+  - Flask: Lightweight web server for handling OAuth redirections
+- **Security:**
+  - **cryptography**: For token encryption and decryption
+  - **hashlib**: For hashing user identifiers
+  - **secrets**: For secure token state generation
+- **Database:**
+  - **SQLAlchemy**: ORM for database management
+  - **SQLite**: Lightweight, serverless database engine
+- **Configuration and Data:**
+  - pyyaml: For handling YAML configuration files
+- **Utilities:**
+  - loguru: Advanced logging system
+  - python-dotenv: Environment variable management
+  - pydantic: Data validation
+  - pathlib: Modern file path handling
 - **Testing:**
-  - pytest: Framework principal de pruebas
-  - pytest-asyncio: Soporte para pruebas asíncronas
-  - pytest-cov: Medición de cobertura de código
-  - pytest-mock: Creación de mocks con integración nativa en pytest
+  - pytest: Main testing framework
+  - pytest-asyncio: Support for asynchronous tests
+  - pytest-cov: Code coverage measurement
+  - pytest-mock: Creation of mocks with native integration in pytest
 
-### Herramientas de desarrollo y entorno de trabajo
-- Gestor de paquetes: uv (alternativa moderna a pip)
-- Control de versiones: Git
-- Entorno virtual: Recomendado para aislamiento de dependencias
-- Pruebas: pytest con los plugins mencionados anteriormente
+### Development Tools and Work Environment
+- Package manager: uv (modern alternative to pip)
+- Version control: Git
+- Virtual environment: Recommended for dependency isolation
+- Tests: pytest with the plugins mentioned above
 
-## 3. Arquitectura y estructura
+## 3. Architecture and Structure
 
-### Diagrama conceptual de la arquitectura
-La arquitectura sigue un patrón modular con separación clara de responsabilidades, autenticación OAuth, y encriptación para seguridad:
+### Conceptual Architecture Diagram
+The architecture follows a modular pattern with clear separation of responsibilities, OAuth authentication, and encryption for security:
 
 ```
                   ┌─────────────┐
@@ -110,386 +113,414 @@ La arquitectura sigue un patrón modular con separación clara de responsabilida
                   │   Server    │
                   └──────┬──────┘
                          │
-                         │ (Autenticación)
+                         │ (Authentication)
                          ▼
-Usuario (Telegram) → Bot de Telegram → Módulo OAuth → Módulo Google Sheets → Hojas del usuario
+User (Telegram) → Telegram Bot → OAuth Module → Google Sheets Module → User Sheets
         ↑                   ↓               ↓                  ↓
         └───────────────────┴───────────────┴──────────────────┘
-                   (Respuestas y visualizaciones)
+                   (Responses and visualizations)
 
+                         ┌─────────────┐             ┌─────────────┐
+                         │  Encryption │             │  Database   │
+                         │   (Fernet)  │◄────────────┤   (SQLite)  │
+                         └──────┬──────┘             └─────────────┘
+                                │
+                                ▼
                          ┌─────────────┐
-                         │  Encriptación│
-                         │   (Fernet)   │◄────────────┐
-                         └──────┬──────┘             │
-                                │                    │
-                                ▼                    │
-                         ┌─────────────┐             │
-                         │   Tokens    │             │
-                         │  (Cifrados) │─────────────┘
+                         │   Tokens    │
+                         │ (Encrypted) │
                          └─────────────┘
 ```
 
-El flujo de información comienza cuando el usuario envía comandos al bot a través de Telegram. El usuario primero se autentica mediante OAuth 2.0, lo que permite al bot acceder a sus propias hojas de cálculo de Google. **Los tokens generados en este proceso se encriptan utilizando Fernet (de la biblioteca cryptography) antes de almacenarse en disco**. El bot procesa los comandos y, según sea necesario, interactúa con el módulo de Google Sheets para leer o escribir datos en las hojas del usuario, desencriptando los tokens cuando se requieren. Finalmente, el bot envía respuestas al usuario basadas en el resultado de estas operaciones.
+The information flow begins when the user sends commands to the bot through Telegram. The user first authenticates using OAuth 2.0, which allows the bot to access their own Google spreadsheets. **The tokens generated in this process are encrypted using Fernet (from the cryptography library) before being stored in the SQLite database**. The bot processes the commands and, as needed, interacts with the Google Sheets module to read or write data in the user's sheets, decrypting the tokens when required. Finally, the bot sends responses to the user based on the result of these operations.
 
-### Estructura de componentes/módulos
+### Component/Module Structure
 ```
 /finanzas/
 │
-├── src/                  # Código fuente
-│   ├── auth/             # Autenticación OAuth 2.0
-│   │   ├── __init__.py   # Inicialización del módulo
-│   │   └── oauth.py      # Gestor de autenticación OAuth con encriptación
+├── src/                  # Source code
+│   ├── __init__.py       # Main module initialization
+│   ├── auth/             # OAuth 2.0 Authentication
+│   │   ├── __init__.py   # Module initialization
+│   │   └── oauth.py      # OAuth authentication manager with encryption
 │   │
-│   ├── bot/              # Lógica del bot de Telegram
-│   │   ├── __init__.py   # Inicialización del módulo
-│   │   ├── bot.py        # Configuración principal del bot
-│   │   ├── handlers.py   # Manejadores de mensajes y comandos
-│   │   ├── commands.py   # Definiciones de comandos
-│   │   └── handlers/     # Manejadores específicos
-│   │       ├── __init__.py # Inicialización del módulo
-│   │       └── auth_handlers.py # Manejadores de autenticación
+│   ├── bot/              # Telegram bot logic
+│   │   ├── __init__.py   # Module initialization
+│   │   ├── bot.py        # Main bot configuration
+│   │   ├── handlers.py   # Message and command handlers
+│   │   ├── commands.py   # Command definitions
+│   │   └── auth_handlers.py # Specific handlers for authentication
 │   │
-│   ├── config/           # Configuraciones externas
-│   │   ├── __init__.py   # Inicialización del módulo
-│   │   ├── categories.py # Gestor de categorías
-│   │   └── categories.yaml # Archivo de configuración de categorías
+│   ├── config/           # External configurations
+│   │   ├── __init__.py   # Module initialization
+│   │   ├── categories.py # Categories manager
+│   │   └── categories.yaml # Categories configuration file
 │   │
-│   ├── server/           # Servidor para OAuth
-│   │   ├── __init__.py   # Inicialización del módulo
-│   │   └── oauth_server.py # Servidor para redirecciones OAuth
+│   ├── db/               # Database models and functions
+│   │   ├── __init__.py   # Module initialization
+│   │   └── database.py   # SQLAlchemy configuration and models
 │   │
-│   ├── sheets/           # Integración con Google Sheets
-│   │   ├── __init__.py   # Inicialización del módulo
-│   │   ├── client.py     # Cliente para conectar con Google Sheets
-│   │   └── operations.py # Operaciones con las hojas de cálculo
+│   ├── server/           # Server for OAuth
+│   │   ├── __init__.py   # Module initialization
+│   │   └── oauth_server.py # Server for OAuth redirections
 │   │
-│   ├── database.py     # Módulo de base de datos (SQLAlchemy)
+│   ├── sheets/           # Google Sheets integration
+│   │   ├── __init__.py   # Module initialization
+│   │   ├── client.py     # Client to connect with Google Sheets
+│   │   └── operations.py # Operations with spreadsheets
 │   │
-│   └── utils/            # Utilidades comunes
-│       ├── __init__.py   # Inicialización del módulo
-│       ├── config.py     # Configuración y variables de entorno
-│       └── logger.py     # Configuración de logging
+│   └── utils/            # Common utilities
+│       ├── __init__.py   # Module initialization
+│       ├── config.py     # Configuration and environment variables
+│       └── logger.py     # Logging configuration
 │
-├── tests/                # Pruebas automatizadas
-│   ├── test_bot.py       # Pruebas para el bot de Telegram
-│   ├── test_commands.py  # Pruebas para los comandos del bot
-│   ├── test_handlers.py  # Pruebas para los manejadores del bot
-│   ├── test_sheets.py    # Pruebas para la integración con Google Sheets
-│   ├── test_auth.py      # Pruebas para la autenticación OAuth
-│   ├── conftest.py       # Fixtures compartidos para pruebas
-│   └── README.md         # Documentación de pruebas
+├── tests/                # Automated tests
+│   ├── __init__.py       # Test module initialization
+│   ├── test_bot.py       # Tests for the Telegram bot
+│   ├── test_commands.py  # Tests for bot commands
+│   ├── test_handlers.py  # Tests for bot handlers
+│   ├── test_sheets.py    # Tests for Google Sheets integration
+│   ├── test_auth.py      # Tests for OAuth authentication
+│   ├── conftest.py       # Shared fixtures for tests
+│   └── README.md         # Test documentation
 │
-├── tokens/               # Directorio para tokens OAuth encriptados
-├── docs/                 # Documentación del proyecto
-│   └── handover.md       # Documento de transferencia
+├── docs/                 # Project documentation
+│   └── handover.md       # Handover document
 │
-├── main.py               # Punto de entrada de la aplicación
-├── pyproject.toml        # Configuración del proyecto Python
-├── pytest.ini            # Configuración de pytest
-├── .env                  # Variables de entorno (local)
-├── .env.example          # Ejemplo de variables de entorno
-├── oauth_credentials.json # Credenciales OAuth de Google API
-└── README.md             # Documentación principal
+├── logs/                 # Directory for log files
+│
+├── main.py               # Application entry point
+├── finanzas.db           # SQLite database
+├── pyproject.toml        # Python project configuration
+├── pytest.ini            # pytest configuration
+├── .env                  # Environment variables (local)
+├── .env.example          # Example environment variables
+├── oauth_credentials.json # Google API OAuth credentials
+└── README.md             # Main documentation
 ```
 
-### Patrones de diseño implementados
-- **Patrón Cliente**: Encapsulación del acceso a Google Sheets en una clase cliente (`GoogleSheetsClient`)
-- **Patrón Factory**: Creación de manejadores para el bot de Telegram (en `commands.py`)
-- **Patrón Gestor de Configuración**: Implementado con la clase `CategoryManager` que centraliza el acceso a las configuraciones de categorías
-- **Patrón Estado**: Implementado para el flujo de conversación usando el diccionario `user_data` con estados definidos para manejar la transición entre pasos del flujo
-- **Patrón Proxy/Delegación**: Implementado en `OAuthManager` para manejar la autenticación con Google
-- **Criptografía Aplicada**: Implementado en `OAuthManager` para encriptar y desencriptar tokens almacenados
-- **Propiedades (@property)**: Para el acceso controlado a la configuración (en `config.py` y `categories.py`)
-- **Inyección de dependencias**: Las clases reciben sus dependencias en el constructor (por ejemplo, `TelegramBot` recibe `SheetsOperations` y `OAuthManager`)
-- **Callback asíncronos**: Uso de `post_init` para registro de comandos del bot de forma asíncrona
-- **Servidor multi-hilos**: Implementación del servidor OAuth en un hilo separado para no bloquear el bot
-- **Patrón Observer**: Implementado para la comunicación entre el servidor OAuth y el bot mediante callbacks
-- **Nombres en inglés con documentación en español**: Convención adoptada donde los nombres de clases, funciones y variables están en inglés, pero los comentarios y documentación están en español
+### Design Patterns Implemented
+- **Client Pattern**: Encapsulation of Google Sheets access in a client class (`GoogleSheetsClient`)
+- **Factory Pattern**: Creation of handlers for the Telegram bot (in `commands.py`)
+- **Repository Pattern**: Implemented for data access through SQLAlchemy
+- **State Pattern**: Implemented for conversation flow using the `user_data` dictionary with defined states to handle the transition between flow steps
+- **Proxy/Delegation Pattern**: Implemented in `OAuthManager` to handle Google authentication
+- **Applied Cryptography**: Implemented in `OAuthManager` to encrypt and decrypt stored tokens
+- **Properties (@property)**: For controlled access to configuration (in `config.py`)
+- **Dependency Injection**: Classes receive their dependencies in the constructor (for example, `TelegramBot` receives `SheetsOperations` and `OAuthManager`)
+- **Asynchronous Callbacks**: Use of `post_init` for asynchronous bot command registration
+- **Multi-threaded Server**: Implementation of the OAuth server in a separate thread to avoid blocking the bot
+- **Observer Pattern**: Implemented for communication between the OAuth server and the bot through callbacks
+- **ORM (Object-Relational Mapping)**: Use of SQLAlchemy to map Python objects to database tables
 
-## 4. Estado actual del desarrollo
+## 4. Current Development Status
 
-### Características implementadas y funcionalidades completas
-- Estructura básica completa del proyecto con organización modular
-- Configuración inicial para el bot de Telegram implementada
-- **Sistema de autenticación OAuth 2.0 completo:**
-  - Flujo de autorización con redirección a Google
-  - Gestión de tokens por usuario
-  - Refresco automático de tokens expirados
-  - Revocación de acceso
-  - **Encriptación completa de tokens almacenados**
-  - **Gestión segura de claves criptográficas**
-- **Nuevos comandos implementados:**
-  - `/auth`: Inicia el proceso de autenticación OAuth
-  - `/sheet`: Selecciona una hoja de cálculo específica (incluye la funcionalidad de listar hojas disponibles)
-  - `/logout`: Cierra sesión y revoca acceso
-- Manejadores para comandos `/start`, `/help`, `/agregar` y `/recargar`
-- Servidor web para manejar redirecciones OAuth implementado
-- Implementación completa del comando `/agregar` con flujo interactivo mediante botones:
-  - Selección clara del tipo de transacción (ingreso/egreso) como primer paso
-  - Selección de categorías mediante botones
-  - Selección de subcategorías para gastos
-  - Entrada de montos
-  - Opción para añadir comentarios opcional mediante botones (Sí/No)
-  - Registro en hojas de cálculo con todos los campos
-- Sistema de categorías configurables desde archivo YAML externo
-- Autenticación multi-usuario con OAuth 2.0:
-  - Cada usuario accede a sus propias hojas de cálculo
-  - Los datos se almacenan en hojas específicas del usuario
-  - Manejo de múltiples sesiones de usuario simultáneas
-- Capacidad para recargar las categorías en tiempo de ejecución sin reiniciar el bot
-- Integración con Google Sheets para almacenar las transacciones en hojas específicas del usuario
-- Uso de `pathlib.Path` para manejo moderno de rutas de archivos
-- Sistema de estados para gestionar flujos de conversación con robustez
-- Sistema avanzado de manejo de errores y recuperación
-- **Sistema de tipado estático completo:**
-  - Anotaciones de tipo en todas las interfaces públicas
-  - Uso de características modernas de tipado de Python 3.9+
-  - Documentación de tipos detallada
-- **Sistema de pruebas completo:**
-  - Pruebas unitarias para los componentes del bot
-  - Pruebas para la integración con Google Sheets
-  - Pruebas para la autenticación OAuth
-  - Pruebas para el servidor de redirección
-  - Mocks para APIs externas (Telegram, Google)
-- **Implementación de la base de datos SQL con SQLAlchemy y SQLite:**
- - Almacenamiento persistente de usuarios, tokens de autenticación encriptados y hojas de cálculo seleccionadas.
- - Creación de las tablas `User`, `AuthToken` y `UserSheet` según el esquema planificado.
- - Refactorización del almacenamiento de tokens y selección de hojas para usar la base de datos.
+### Implemented Features and Complete Functionalities
+- Complete basic project structure with modular organization
+- Initial Telegram bot configuration implemented
+- **Complete OAuth 2.0 authentication system:**
+  - Authorization flow with Google redirection
+  - Token management by user
+  - Automatic refresh of expired tokens
+  - Access revocation
+  - **Complete token encryption**
+  - **Secure cryptographic key management**
+- **Implemented commands:**
+  - `/auth`: Initiates the OAuth authentication process
+  - `/sheet`: Selects a specific spreadsheet (includes functionality to list available sheets)
+  - `/logout`: Logs out and revokes access
+  - `/start`: Initiates interaction with the bot
+  - `/help`: Shows help about available commands
+  - `/agregar`: Adds a new expense or income
+  - `/recargar`: Reloads data from the server
+- Web server for handling OAuth redirections implemented
+- Complete implementation of the `/agregar` command with interactive flow using buttons:
+  - Clear selection of transaction type (income/expense) as the first step
+  - Category selection using buttons
+  - Subcategory selection for expenses
+  - Amount entry
+  - Option to add optional comments using buttons (Yes/No)
+  - Registration in spreadsheets with all fields
+- System of configurable categories from external YAML file
+- Multi-user OAuth 2.0 authentication:
+  - Each user accesses their own spreadsheets
+  - Data is stored in user-specific sheets
+  - Handling of multiple simultaneous user sessions
+- Ability to reload categories at runtime without restarting the bot
+- Integration with Google Sheets to store transactions in user-specific sheets
+- Use of `pathlib.Path` for modern file path handling
+- State system to manage conversation flows with robustness
+- Advanced error handling and recovery system
+- **Complete static typing system:**
+  - Type annotations on all public interfaces
+  - Use of modern Python 3.9+ typing features
+  - Detailed type documentation
+- **Complete testing system:**
+  - Unit tests for bot components
+  - Tests for Google Sheets integration
+  - Tests for OAuth authentication
+  - Tests for the redirection server
+  - Mocks for external APIs (Telegram, Google)
+- **SQL database implementation with SQLAlchemy and SQLite:**
+ - Persistent storage of users, encrypted authentication tokens, and selected spreadsheets.
+ - Creation of `User`, `AuthToken`, and `UserSheet` tables according to the planned schema.
+ - Refactoring of token storage and sheet selection to use the database.
 
-### Progreso y logros hasta la fecha
-- Implementación completa del sistema de autenticación OAuth 2.0
-- Migración desde autenticación por cuenta de servicio a OAuth 2.0
-- **Implementación de encriptación de tokens mediante Fernet**
-- **Mejora del almacenamiento de tokens mediante hashing seguro de identificadores**
-- **Revocación de tokens implementada con limpieza de archivos locales**
-- Soporte para múltiples usuarios con acceso a sus propias hojas
-- Integración de un servidor web para manejar redirecciones OAuth
-- Implementación de flujo completo de autorización y selección de hojas
-- Gestión segura de tokens por usuario
-- Refresco automático de tokens expirados
-- Navegación intuitiva entre diferentes hojas de cálculo
-- Mejora en la seguridad al no requerir compartir hojas con una cuenta de servicio
-- Mejoras en el mensaje de inicio para guiar al usuario en el proceso de autenticación
-- Implementación de verificaciones de autenticación en todas las operaciones relevantes
-- Mejoras significativas en el manejo de errores relacionados con autenticación
-- Las hojas "gastos" e "ingresos" incluyen columnas para categoría, subcategoría y comentario
-- Comando `/help` actualizado con los nuevos comandos disponibles
-- Implementación completa del sistema de tipado estático moderno
-- Implementación exitosa de la integración con base de datos SQL (SQLAlchemy + SQLite).
-### Documentación técnica existente
-- Docstrings detallados en clases y métodos principales
-- README.md actualizado con instrucciones para OAuth 2.0
-- Documentación de pruebas en tests/README.md
-- Estructura del proyecto bien organizada y documentada
-- Archivo YAML con documentación clara sobre las categorías
-- Documento de transferencia detallado actualizado con la implementación OAuth y encriptación (este documento)
+### Progress and Achievements to Date
+- Complete implementation of the OAuth 2.0 authentication system
+- Migration from service account authentication to OAuth 2.0
+- **Implementation of token encryption using Fernet**
+- **Refactoring to use SQLAlchemy with SQLite instead of files:**
+  - Secure storage of encrypted tokens in the database
+  - Association of users with selected spreadsheets
+  - Data persistence between bot restarts
+- **Token revocation implemented with cleanup of database records**
+- Support for multiple users with access to their own sheets
+- Integration of a web server to handle OAuth redirections
+- Implementation of complete authorization flow and sheet selection
+- Secure token management by user
+- Automatic refresh of expired tokens
+- Intuitive navigation between different spreadsheets
+- Improved security by not requiring sharing sheets with a service account
+- Improvements in the start message to guide the user in the authentication process
+- Implementation of authentication checks in all relevant operations
+- Significant improvements in authentication-related error handling
+- The "gastos" (expenses) and "ingresos" (income) sheets include columns for category, subcategory, and comment
+- `/help` command updated with new available commands
+- Complete implementation of the modern static typing system
+- Successful implementation of SQL database integration (SQLAlchemy + SQLite)
 
-## 5. Desafíos y consideraciones técnicas
+### Existing Technical Documentation
+- Detailed docstrings in main classes and methods
+- README.md updated with instructions for OAuth 2.0
+- Test documentation in tests/README.md
+- Well-organized and documented project structure
+- YAML file with clear documentation about categories
+- Detailed handover document updated with OAuth implementation, encryption, and database (this document)
 
-### Problemas conocidos o limitaciones
-- No hay comandos para consultar o visualizar las transacciones registradas
-- No hay validación avanzada para los valores ingresados por los usuarios
-- No hay mecanismos para la edición o eliminación de transacciones erróneas
-- El manejo asíncrono entre Python y python-telegram-bot puede ser complejo:
-  - Se ha implementado una solución utilizando post_init callbacks para el registro de comandos
-  - Pueden surgir advertencias relacionadas con coroutines no esperadas, que no afectan la funcionalidad
-- Potenciales errores en el manejo de comentarios cuando el estado de la conversación se pierde
-- El servidor OAuth requiere acceso a puertos en el servidor para redirecciones
-- En entornos de producción, se requiere un dominio público con HTTPS para las redirecciones OAuth
-- **La clave de encriptación se almacena en la variable de entorno `OAUTH_ENCRYPTION_KEY`, lo que requiere protección adicional del archivo `.env`**
+## 5. Challenges and Technical Considerations
 
-### Deuda técnica acumulada
-- No hay validación de datos exhaustiva para las entradas financieras
-- Las cargas asíncronas para múltiples componentes no están implementadas de manera óptima
-- No hay documentación de usuario final completa
-- Faltan pruebas para algunos escenarios específicos con las nuevas funcionalidades OAuth:
-  - Pruebas de integración completa del flujo OAuth
-  - Pruebas para el manejo de tokens expirados
-  - Pruebas para la comunicación entre servidor OAuth y bot
-- **Faltan pruebas para la nueva funcionalidad de encriptación:**
-  - **Pruebas de encriptación y desencriptación de tokens**
-  - **Pruebas de recuperación ante errores de desencriptación**
-  - **Pruebas de gestión de claves**
-- El manejo de cierre del servidor OAuth podría mejorarse para garantizar una terminación limpia
-- No hay verificación estática de tipos configurada en el flujo de CI/CD
+### Known Issues or Limitations
+- No commands to query or visualize recorded transactions
+- No advanced validation for user-entered values
+- No mechanisms for editing or deleting erroneous transactions
+- Asynchronous handling between Python and python-telegram-bot can be complex:
+  - A solution has been implemented using post_init callbacks for command registration
+  - Warnings related to unexpected coroutines may arise, which do not affect functionality
+- Potential errors in comment handling when conversation state is lost
+- The OAuth server requires port access on the server for redirections
+- In production environments, a public domain with HTTPS is required for OAuth redirections
+- **The encryption key is stored in the `OAUTH_ENCRYPTION_KEY` environment variable, which requires additional protection of the `.env` file**
 
-### Optimizaciones pendientes
-- **Implementar rotación periódica de claves de encriptación**
-- Implementar expiración de sesiones para usuarios inactivos
-- Mejorar la gestión de errores específicos de OAuth
-- Implementar caching para reducir llamadas a la API de Google
-- Mejorar el manejo de errores para situaciones específicas
-- Implementar validación de datos avanzada para las entradas financieras
-- Integrar herramientas automáticas de análisis de código (linters, formatters)
-- Añadir verificación estática de tipos con mypy
-- Mejorar el manejo asíncrono de operaciones para evitar advertencias
-- Mejorar la comunicación entre el servidor OAuth y el bot:
-  - Implementar mecanismo más robusto para comunicar códigos de autorización
-  - Manejar timeouts en el proceso de autorización
+### Accumulated Technical Debt
+- No comprehensive data validation for financial entries
+- Asynchronous loads for multiple components are not implemented optimally
+- No complete end-user documentation
+- Missing tests for some specific scenarios with the new OAuth functionalities:
+  - Complete integration tests for the OAuth flow
+  - Tests for expired token handling
+  - Tests for communication between OAuth server and bot
+- **Missing comprehensive tests for database integration:**
+  - Data persistence tests between restarts
+  - Referential integrity tests
+  - Concurrency tests
+- **Missing tests for encryption functionality:**
+  - Token encryption and decryption tests
+  - Recovery tests for decryption errors
+  - Key management tests
+- OAuth server closure handling could be improved to ensure clean termination
+- No static type checking configured in the CI/CD flow
+- No automatic database schema migration for future changes
 
-## 6. Hoja de ruta
+### Pending Optimizations
+- **Implement periodic rotation of encryption keys**
+- Implement session expiration for inactive users
+- Improve specific OAuth error handling
+- Implement caching to reduce calls to the Google API
+- Improve error handling for specific situations
+- Implement advanced data validation for financial entries
+- Integrate automatic code analysis tools (linters, formatters)
+- Add static type checking with mypy
+- Improve asynchronous operation handling to avoid warnings
+- Improve communication between the OAuth server and the bot:
+  - Implement more robust mechanism to communicate authorization codes
+  - Handle timeouts in the authorization process
+- **Optimize database queries:**
+  - Implement additional indexes if necessary
+  - Consider using a cache system for frequent queries
+- **Implement a migration system for the database:**
+  - Use Alembic to manage database schema changes
+  - Allow updates without data loss
 
-### Próximos pasos inmediatos
-1. **Implementar rotación y gestión avanzada de claves criptográficas**
-2. **Implementar re-encriptación de tokens en caso de cambio de clave**
-3. **Mejorar el manejo de errores específicos para encriptación/desencriptación de tokens**
-4. Implementar comando para consultar transacciones recientes incluyendo comentarios
-5. Implementar comando para visualizar resúmenes (ej: gastos por categoría) por usuario
-6. Mejorar la validación de datos de entrada en todos los campos
-7. Añadir funcionalidad para editar o eliminar transacciones
-8. **Implementar pruebas para las nuevas funcionalidades de encriptación (incluyendo interacciones con BD)**
-9. Configurar verificación estática de tipos con mypy
-10. Mejorar documentación de usuario final para el proceso de autenticación
-11. Monitorear el rendimiento de la base de datos y optimizar consultas si es necesario.
+## 6. Roadmap
 
-### Características planificadas a medio/largo plazo
-1. **Sistema de almacenamiento más seguro para claves criptográficas (HSM o sistemas de gestión de secretos)**
-2. Implementar reportes y análisis financieros más avanzados por usuario
-3. Agregar funcionalidades de presupuestos y alertas
-4. Integrar gráficos y visualizaciones a través de Telegram
-5. Permitir exportación de datos en diferentes formatos
-6. Implementar análisis inteligente de patrones de gasto
-7. Permitir compartir hojas entre múltiples usuarios (colaboración)
-8. Búsquedas por texto en comentarios y filtrado de transacciones
-9. Implementar notificaciones programadas y recordatorios
-10. Añadir soporte para múltiples monedas y conversión automática
+### Immediate Next Steps
+1. **Implement advanced rotation and management of cryptographic keys**
+2. **Implement token re-encryption in case of key change**
+3. **Improve specific error handling for token encryption/decryption**
+4. Implement command to query recent transactions including comments
+5. Implement command to visualize summaries (e.g., expenses by category) by user
+6. Improve input data validation in all fields
+7. Add functionality to edit or delete transactions
+8. **Implement tests for the new database functionalities**
+9. **Implement tests for encryption functionalities**
+10. Configure static type checking with mypy
+11. Improve end-user documentation for the authentication process
+12. **Implement migration system with Alembic**
 
-### Cronograma tentativo
-Información no disponible: No se ha establecido un cronograma formal para el desarrollo.
+### Planned Features for Medium/Long Term
+1. **More secure storage system for cryptographic keys (HSM or secret management systems)**
+2. Implement more advanced financial reports and analysis by user
+3. Add budget and alert functionalities
+4. Integrate charts and visualizations through Telegram
+5. Allow data export in different formats
+6. Implement intelligent spending pattern analysis
+7. Allow sharing sheets between multiple users (collaboration)
+8. Text searches in comments and transaction filtering
+9. Implement scheduled notifications and reminders
+10. Add support for multiple currencies and automatic conversion
+11. **Migrate to a more robust database for production environments (PostgreSQL)**
+12. **Implement database backup and restoration mechanisms**
 
-## 7. Decisiones clave
+### Tentative Schedule
+Information not available: No formal development schedule has been established.
 
-### Elecciones arquitectónicas importantes y sus justificaciones
-1. **Migración de service_account a OAuth 2.0**: Permite a cada usuario utilizar sus propias hojas, mejorando la privacidad y evitando la necesidad de compartir hojas con una cuenta de servicio.
-2. **Servidor Flask para redirecciones OAuth**: Proporciona una forma simple y eficiente de manejar el callback de redirección de OAuth, ejecutándose en un hilo separado para no bloquear el bot.
-3. **Gestor OAuth centralizado**: Encapsula toda la lógica de autenticación en una clase dedicada, facilitando la gestión de tokens y credenciales.
-4. **Encriptación de tokens**: Utiliza Fernet (cryptography) para encriptar tokens en disco, mejorando significativamente la seguridad de las credenciales de usuario.
-5. **Hashing de identificadores de usuario**: Utiliza SHA-256 para generar nombres de archivo seguros para los tokens, evitando revelar información sensible en los nombres de archivo.
-6. **Uso de python-telegram-bot**: Proporciona una API moderna y asíncrona para interactuar con la API de Telegram.
-7. **Uso de gspread con OAuth**: Ofrece una interfaz sencilla para acceder a hojas específicas del usuario.
-8. **Estructura modular**: Facilita la extensión y mantenimiento del código, con clara separación de responsabilidades.
-9. **Sistema de tipado moderno (Python 3.9+)**: Mejora la legibilidad, documentación y verificación de código con menor sobrecarga visual.
-10. **Loguru para logging**: Proporciona una interfaz más amigable y potente que el módulo logging estándar.
-11. **Pytest y pytest-mock para pruebas**: Framework moderno con mejor soporte para fixtures y mocking que unittest.
-12. **Sistema de estados para conversación**: Permite un flujo robusto y recuperable, facilitando la gestión de la conversación por etapas.
-13. **Verificación preventiva de datos**: Validación de la existencia de datos antes de procesarlos para evitar errores por pérdida de estado.
+## 7. Key Decisions
 
-### Compensaciones (trade-offs) técnicos realizados
-1. **Complejidad vs. Flexibilidad**: La implementación de OAuth 2.0 y encriptación aumenta la complejidad del sistema, pero ofrece mayor flexibilidad y seguridad para los usuarios.
-2. **Rendimiento vs. Seguridad**: La encriptación/desencriptación añade una pequeña sobrecarga de procesamiento, pero mejora significativamente la seguridad.
-3. **Servidor local vs. Servicio externo**: Se optó por implementar un servidor local para OAuth, lo que simplifica el desarrollo pero requiere consideraciones adicionales para producción.
-4. **Clave de encriptación en variables de entorno vs. Sistema de gestión de secretos**: Se eligió usar variables de entorno por simplicidad, aunque un sistema dedicado de gestión de secretos sería más seguro.
-5. **Telegram como interfaz principal**: Se optó por Telegram por su accesibilidad y simplicidad, aunque limita algunas opciones de UI avanzadas.
-6. **Google Sheets como base de datos**: Se eligió por su facilidad de uso y visualización, aunque no tiene las capacidades de un sistema de base de datos completo.
-7. **Pruebas con pytest-mock vs unittest.mock**: Se eligió pytest-mock por su mejor integración con pytest y sintaxis más limpia, aunque requiere una dependencia adicional.
-8. **Flujo guiado vs. entrada libre**: Se implementó un flujo guiado por pasos usando botones, lo que mejora la experiencia de usuario pero requiere más complejidad en el código.
-9. **Manejadores específicos vs. manejadores generales**: Se implementaron manejadores específicos para OAuth, lo que mejora la organización del código pero aumenta la complejidad de la estructura.
-10. **Robustez vs. rendimiento**: Se implementaron múltiples verificaciones y logging para garantizar la robustez, aceptando un ligero impacto en el rendimiento.
-11. **Tipado moderno vs. compatibilidad con versiones antiguas**: Se eligió el tipado moderno (Python 3.9+) por su claridad y concisión, sacrificando la compatibilidad con versiones anteriores de Python.
+### Important Architectural Choices and Their Justifications
+1. **Migration from service_account to OAuth 2.0**: Allows each user to use their own sheets, improving privacy and avoiding the need to share sheets with a service account.
+2. **Flask server for OAuth redirections**: Provides a simple and efficient way to handle OAuth redirection callback, running in a separate thread to avoid blocking the bot.
+3. **Centralized OAuth manager**: Encapsulates all authentication logic in a dedicated class, facilitating token and credential management.
+4. **Token encryption**: Uses Fernet (cryptography) to encrypt tokens in the database, significantly improving the security of user credentials.
+5. **Use of SQLAlchemy with SQLite**: Provides data persistence and a relational data model while maintaining implementation simplicity without requiring a separate database server.
+6. **ORM for data access**: Provides an abstraction layer that facilitates working with the database and allows changing the database engine in the future if necessary.
+7. **Use of python-telegram-bot**: Provides a modern and asynchronous API to interact with the Telegram API.
+8. **Use of gspread with OAuth**: Offers a simple interface to access user-specific sheets.
+9. **Modular structure**: Facilitates code extension and maintenance, with clear separation of responsibilities.
+10. **Modern typing system (Python 3.9+)**: Improves readability, documentation, and code verification with less visual overhead.
+11. **Loguru for logging**: Provides a more friendly and powerful interface than the standard logging module.
+12. **Pytest and pytest-mock for tests**: Modern framework with better support for fixtures and mocking than unittest.
+13. **State system for conversation**: Allows a robust and recoverable flow, facilitating conversation management by stages.
+14. **Preventive data verification**: Validation of data existence before processing to avoid errors due to lost state.
 
-### Lecciones aprendidas durante el desarrollo
-- La autenticación OAuth 2.0 requiere una cuidadosa planificación del flujo de usuario.
-- La comunicación entre un servidor web y un bot de Telegram requiere mecanismos de sincronización.
-- El manejo de tokens requiere consideraciones de seguridad importantes, incluyendo encriptación.
-- **La gestión de claves criptográficas es un aspecto crítico que requiere atención específica.**
-- **El uso de hash para nombres de archivo proporciona una capa adicional de seguridad.**
-- La gestión de estados de usuario es crucial para mantener la coherencia de la aplicación.
-- La correcta estructura y modularización desde el inicio facilita la extensión del proyecto.
-- La implementación de flujos interactivos con botones mejora significativamente la experiencia de usuario.
-- El registro detallado de eventos (logging) es indispensable para identificar problemas en producción.
-- La verificación de autenticación debe realizarse en cada punto donde se accede a recursos protegidos.
-- **El manejo correcto de errores de autenticación y desencriptación mejora significativamente la experiencia de usuario.**
-- Cada usuario puede tener diferentes necesidades y estructuras de hojas de cálculo.
-- Las anotaciones de tipo modernas mejoran significativamente la documentación del código y reducen errores.
-- La consistencia en el estilo de tipado es importante para la mantenibilidad del código.
-- **La biblioteca cryptography proporciona herramientas poderosas y fáciles de usar para encriptación segura.**
+### Technical Trade-offs Made
+1. **Complexity vs. Flexibility**: The implementation of OAuth 2.0, encryption, and database increases system complexity, but offers greater flexibility, security, and persistence for users.
+2. **Performance vs. Security**: Encryption/decryption adds a small processing overhead, but significantly improves security.
+3. **Local server vs. External service**: A local server was chosen for OAuth, which simplifies development but requires additional considerations for production.
+4. **SQLite vs. Server database**: SQLite was chosen for its simplicity and ease of configuration, although it has limitations in concurrency and scalability compared to systems like PostgreSQL.
+5. **Encryption key in environment variables vs. Secret management system**: Environment variables were chosen for simplicity, although a dedicated secret management system would be more secure.
+6. **Telegram as main interface**: Telegram was chosen for its accessibility and simplicity, although it limits some advanced UI options.
+7. **Google Sheets as transaction database**: Chosen for its ease of use and visualization, although it doesn't have the capabilities of a complete database system.
+8. **Tests with pytest-mock vs unittest.mock**: pytest-mock was chosen for its better integration with pytest and cleaner syntax, although it requires an additional dependency.
+9. **Guided flow vs. Free input**: A guided flow was implemented using buttons, which improves the user experience but requires more complexity in the code.
+10. **Specific handlers vs. General handlers**: Specific handlers were implemented for OAuth, which improves code organization but increases structure complexity.
+11. **Robustness vs. Performance**: Multiple checks and logging were implemented to ensure robustness, accepting a slight impact on performance.
+12. **Modern typing vs. Compatibility with older versions**: Modern typing (Python 3.9+) was chosen for its clarity and conciseness, sacrificing compatibility with older Python versions.
 
-## 8. Recursos adicionales
+### Lessons Learned During Development
+- OAuth 2.0 authentication requires careful planning of the user flow.
+- Communication between a web server and a Telegram bot requires synchronization mechanisms.
+- Token handling requires important security considerations, including encryption.
+- **Cryptographic key management is a critical aspect that requires specific attention.**
+- **Using SQLAlchemy significantly facilitates working with relational databases from Python.**
+- **Migration from file-based storage to database can significantly improve system robustness.**
+- User state management is crucial to maintain application coherence.
+- Correct structure and modularization from the beginning facilitates project extension.
+- Implementation of interactive flows with buttons significantly improves the user experience.
+- Detailed event logging is indispensable to identify production problems.
+- Authentication verification must be performed at each point where protected resources are accessed.
+- **Correct handling of authentication and decryption errors significantly improves the user experience.**
+- Each user may have different needs and spreadsheet structures.
+- Modern type annotations significantly improve code documentation and reduce errors.
+- Consistency in typing style is important for code maintainability.
+- **The cryptography library provides powerful and easy-to-use tools for secure encryption.**
+- **Using an ORM like SQLAlchemy allows a smooth transition from file-based storage to a relational database.**
+- **Proper management of database sessions is crucial to avoid resource leaks.**
 
-### Enlaces a repositorios, documentación o diagramas
-Información no disponible: No se han proporcionado enlaces a repositorios externos o documentación adicional.
+## 8. Additional Resources
 
-### Contactos clave para consultas
-Información no disponible: No se han especificado contactos para este proyecto.
+### Links to Repositories, Documentation, or Diagrams
+Information not available: No links to external repositories or additional documentation have been provided.
 
-### Información sobre entornos de prueba/producción
-El proyecto está configurado para ejecutarse en un entorno local de desarrollo. Para un entorno de producción, se recomienda:
-- Configurar un dominio público con HTTPS para las redirecciones OAuth
-- Registrar el dominio público en Google Cloud Platform
-- **Implementar un sistema seguro de gestión de claves criptográficas**
-- **Considerar el uso de servicios de gestión de secretos (HashiCorp Vault, AWS KMS, etc.)**
-- Configurar un sistema de monitoreo para el servidor OAuth y el bot
+### Key Contacts for Queries
+Information not available: No contacts have been specified for this project.
 
-Las pruebas se ejecutan utilizando pytest y pueden ser iniciadas con:
-- `pytest`: Ejecuta las pruebas
-- `pytest --cov=src`: Ejecuta las pruebas con informe de cobertura
+### Information About Test/Production Environments
+The project is configured to run in a local development environment. For a production environment, it is recommended:
+- Configure a public domain with HTTPS for OAuth redirections
+- Register the public domain in Google Cloud Platform
+- **Implement a secure cryptographic key management system**
+- **Consider using secret management services (HashiCorp Vault, AWS KMS, etc.)**
+- **Migrate to a more robust database like PostgreSQL for better scalability**
+- Configure a monitoring system for the OAuth server and the bot
 
-Se recomienda implementar verificación estática de tipos con:
-- `mypy src/`: Verifica tipos estáticos en el código
+Tests are run using pytest and can be initiated with:
+- `pytest`: Runs the tests
+- `pytest --cov=src`: Runs the tests with coverage report
 
-## Instrucciones para continuar el desarrollo
+It is recommended to implement static type checking with:
+- `mypy src/`: Checks static types in the code
 
-1. Clonar el repositorio (o acceder a la carpeta `/home/somebody/dev/finanzas`)
-2. Crear un entorno virtual: `uv venv .venv`
-3. Activar el entorno: `.venv/bin/activate` (Linux/Mac) o `.venv\Scripts\activate` (Windows)
-4. Instalar dependencias: `uv pip install -r requirements.txt`
-5. Para desarrollo, instalar dependencias adicionales: `uv pip install -r requirements-dev.txt`
-6. Configurar variables de entorno copiando `.env.example` a `.env` y completando los valores
-7. Configurar OAuth en Google Cloud Platform:
-   - Crear un proyecto si no existe
-   - Habilitar APIs de Google Sheets y Google Drive
-   - Crear credenciales OAuth 2.0 para aplicación web
-   - Añadir URI de redirección: `http://localhost:8000/oauth2callback`
-   - Descargar el JSON de credenciales y guardarlo como `oauth_credentials.json`
-8. **Generar una clave de encriptación Fernet:**
+## 9. Instructions to Continue Development
+
+1. Clone the repository (or access the `/home/somebody/dev/finanzas` folder)
+2. Create a virtual environment: `uv venv .venv`
+3. Activate the environment: `source .venv/bin/activate` (Linux/Mac) or `.venv\Scripts\activate` (Windows)
+4. Install dependencies: `uv pip install -r requirements.txt`
+5. For development, install additional dependencies: `uv pip install -e ".[dev]"`
+6. Configure environment variables by copying `.env.example` to `.env` and completing the values
+7. Configure OAuth in Google Cloud Platform:
+   - Create a project if it doesn't exist
+   - Enable Google Sheets and Google Drive APIs
+   - Create OAuth 2.0 credentials for web application
+   - Add redirection URI: `http://localhost:8000/oauth2callback`
+   - Download the credentials JSON and save it as `oauth_credentials.json`
+8. **Generate a Fernet encryption key:**
    ```bash
    python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
    ```
-9. **Agregar la clave generada a `.env` como `OAUTH_ENCRYPTION_KEY`**
-10. Ejecutar pruebas: `pytest` o `pytest --cov=src`
-11. Ejecutar la aplicación: `python main.py`
+9. **Add the generated key to `.env` as `OAUTH_ENCRYPTION_KEY`**
+10. Run tests: `pytest` or `pytest --cov=src`
+11. Run the application: `python main.py`
 
-## Cambios recientes importantes
+## 10. Recent Important Changes
 
-Las modificaciones más significativas en la última versión (v3.1) incluyen:
+The most significant modifications in the latest version (v3.2) include:
 
-1. **Implementación de encriptación segura para tokens:**
-   - Uso de Fernet (cryptography) para encriptar/desencriptar tokens
-   - Almacenamiento seguro de tokens en disco
-   - Limpieza automática de tokens corrompidos
-   - Mejor protección de la privacidad de los usuarios
+1. **SQL database implementation:**
+   - Migration from file-based storage to SQLite with SQLAlchemy
+   - Creation of ORM models for users, tokens, and spreadsheets
+   - Implementation of the repository pattern for data access
+   - Refactoring of token storage to use the database
+   - Improvement in data persistence and relationships between entities
 
-2. **Mejoras en la gestión de identificadores de usuario:**
-   - Uso de hash SHA-256 para nombres de archivo de tokens
-   - Prevención de exposición de IDs en nombres de archivo
-   - Generación de nombres de archivo seguros y consistentes
+2. **Security and encryption improvements:**
+   - Storage of encrypted tokens in the database
+   - Improved handling of decryption errors
+   - Better recovery from encryption/decryption failures
+   - Automatic cleanup of invalid tokens in the database
 
-3. **Implementación de revocación de tokens:**
-   - Soporte para revocar tokens con la API de Google
-   - Limpieza automática de tokens locales al revocar acceso
-   - Manejo mejorado de errores durante la revocación
+3. **Project structure improvements:**
+   - Reorganization of modules for better coherence
+   - Improved separation of responsibilities
+   - Refactoring to follow SOLID principles
+   - Improved documentation following modern standards
 
-4. **Gestión de claves de encriptación:**
-   - Soporte para claves Fernet configurables mediante variables de entorno
-   - Documentación de generación de claves seguras
-   - Manejo adecuado de errores de encriptación/desencriptación
+4. **Error handling and recovery improvements:**
+   - Better database session management
+   - Recovery from connection failures
+   - More robust exception handling during authentication
+   - Better error messages for the end user
 
-5. **Mejoras en el manejo de errores:**
-   - Detección y limpieza automática de tokens corruptos
-   - Mejor recuperación ante fallos de autenticación
-   - Mensajes de error más claros y específicos
+These modifications significantly increase the system's robustness and security by improving data persistence, maintaining token encryption in the database, and providing a more structured relational data model that facilitates future expansions.
 
-Estas modificaciones aumentan significativamente la seguridad del sistema al proteger adecuadamente los tokens de acceso de los usuarios, evitando posibles fugas de información sensible y proporcionando un método seguro para la revocación de accesos.
+## 11. SQL Database Implementation
 
----
+SQL database integration has been implemented using SQLAlchemy with a SQLite backend. This implementation replaces file-based storage for authentication tokens and manages user information and selected spreadsheets.
 
-## 9. Implementación de Base de Datos SQL
+### 11.1. Database Schema Design
 
-La integración con una base de datos SQL ha sido implementada utilizando SQLAlchemy con un backend SQLite. Esta implementación reemplaza el almacenamiento basado en archivos para los tokens de autenticación y gestiona la información de usuarios y las hojas de cálculo seleccionadas.
-
-### 9.1. Diseño del Esquema de Base de Datos Implementado
-
-Se proponen tres tablas principales: `users`, `auth_tokens`, y `user_sheets`.
+Three main tables have been implemented: `users`, `auth_tokens`, and `user_sheets`.
 
 ```mermaid
 erDiagram
@@ -521,28 +552,60 @@ erDiagram
         TIMESTAMP created_at "DEFAULT CURRENT_TIMESTAMP"
         TIMESTAMP updated_at "DEFAULT CURRENT_TIMESTAMP"
     }
-
 ```
 
-**Definiciones de Tablas Implementadas:**
+**Implemented Table Definitions:**
 
-*   **`users`**: Almacena información básica sobre los usuarios de Telegram.
-    *   `user_id` (TEXT/BIGINT, Primary Key): ID único de usuario de Telegram.
-    *   `telegram_username` (TEXT, Nullable): Nombre de usuario de Telegram.
-    *   `first_name` (TEXT, Nullable): Nombre del usuario.
-    *   `last_name` (TEXT, Nullable): Apellido del usuario.
-    *   `created_at` (TIMESTAMP): Fecha de creación del usuario.
-    *   `updated_at` (TIMESTAMP): Fecha de última actualización.
-*   **`auth_tokens`**: Almacena tokens OAuth de Google encriptados, reemplazando el directorio `tokens/`.
-    *   `user_id` (TEXT/BIGINT, Primary Key, Foreign Key -> `users.user_id`): Enlace al usuario.
-    *   `encrypted_token` (BLOB/TEXT): Almacena la salida de `Fernet.encrypt()`.
-    *   `token_expiry` (TIMESTAMP, Nullable): Opcionalmente, almacena la fecha de expiración del token sin encriptar para facilitar la consulta/limpieza.
-    *   `created_at` (TIMESTAMP): Fecha de creación del token.
-    *   `updated_at` (TIMESTAMP): Fecha de última actualización del token (ej., después de refrescar).
-*   **`user_sheets`**: Asocia usuarios con su hoja de cálculo de Google seleccionada.
-    *   `user_id` (TEXT/BIGINT, Primary Key, Foreign Key -> `users.user_id`): Enlace al usuario.
-    *   `spreadsheet_id` (TEXT): ID de la hoja de Google seleccionada por el usuario.
-    *   `spreadsheet_title` (TEXT, Nullable): Título de la hoja para retroalimentación al usuario.
-    *   `is_active` (BOOLEAN): Actualmente asume una hoja por usuario, pero permite expansión futura.
-    *   `created_at` (TIMESTAMP): Fecha de asociación de la hoja.
-    *   `updated_at` (TIMESTAMP): Fecha de última actualización.
+*   **`users`**: Stores basic information about Telegram users.
+    *   `user_id` (TEXT, Primary Key): Unique Telegram user ID.
+    *   `telegram_username` (TEXT, Nullable): Telegram username.
+    *   `first_name` (TEXT, Nullable): User's first name.
+    *   `last_name` (TEXT, Nullable): User's last name.
+    *   `created_at` (TIMESTAMP): User creation date.
+    *   `updated_at` (TIMESTAMP): Last update date.
+*   **`auth_tokens`**: Stores encrypted Google OAuth tokens.
+    *   `user_id` (TEXT, Primary Key, Foreign Key -> `users.user_id`): Link to the user.
+    *   `encrypted_token` (BLOB): Stores the output of `Fernet.encrypt()`.
+    *   `token_expiry` (TIMESTAMP, Nullable): Optionally stores the token expiration date unencrypted for easier querying/cleanup.
+    *   `created_at` (TIMESTAMP): Token creation date.
+    *   `updated_at` (TIMESTAMP): Token last update date (e.g., after refreshing).
+*   **`user_sheets`**: Associates users with their selected Google spreadsheet.
+    *   `user_id` (TEXT, Primary Key, Foreign Key -> `users.user_id`): Link to the user.
+    *   `spreadsheet_id` (TEXT): ID of the Google sheet selected by the user.
+    *   `spreadsheet_title` (TEXT, Nullable): Sheet title for user feedback.
+    *   `is_active` (BOOLEAN): Currently assumes one sheet per user, but allows future expansion.
+    *   `created_at` (TIMESTAMP): Sheet association date.
+    *   `updated_at` (TIMESTAMP): Last update date.
+
+### 11.2. Advantages of Database Implementation
+
+1. **Improved data persistence**: Data survives system restarts and doesn't depend on disk files that could become corrupted.
+2. **Referential integrity**: Ensures correct relationships between users, tokens, and selected sheets.
+3. **Structured queries**: Allows performing complex queries when necessary.
+4. **Scalability**: Facilitates migration to more robust database systems in the future (PostgreSQL, MySQL).
+5. **Transactions**: Guarantees atomic operations to maintain data consistency.
+6. **Better organization**: The data model is more explicit and understandable.
+7. **Security**: Better access control to sensitive data.
+
+### 11.3. Technical Implementation
+
+The implementation uses SQLAlchemy as an ORM with the following features:
+
+1. **Declarative models**: Models are defined using the `DeclarativeBase` base class.
+2. **Annotated types**: Use of `Mapped[type]` to define fields with static typing.
+3. **Defined relationships**: Use of foreign keys to maintain referential integrity.
+4. **Automatic timestamps**: `created_at` and `updated_at` fields managed automatically.
+5. **Session management**: Implementation of the session pattern to interact with the database.
+6. **Automatic initialization**: The `init_db()` function ensures that tables exist before starting the application.
+
+### 11.4. Encryption Handling with Database
+
+OAuth tokens are securely stored through the following process:
+
+1. The token is serialized to JSON and encoded in UTF-8
+2. The encoded token is encrypted using Fernet with a secret key
+3. The encrypted token is stored as a BLOB in the database
+4. When retrieving the token, it is decrypted using the same key
+5. If decryption fails, the corrupted record is deleted
+
+This approach ensures that even if someone gains access to the database, they cannot use the stored tokens without the encryption key.
