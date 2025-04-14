@@ -105,21 +105,25 @@ class SheetsOperations:
 
             for sheet_name, headers in required_sheets.items():
                 if sheet_name not in existing_sheets:
-                    worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=1, cols=len(headers))
-                    worksheet.append_row(headers)
-                    logger.info(f"Internal sheet '{sheet_name}' created in '{spreadsheet.title}' for user {user_id}")
+                    spreadsheet.add_worksheet(title=sheet_name, rows=1, cols=len(headers))
+                    logger.info(f"Internal sheet '{sheet_name}' created in '{spreadsheet.title}' for user {user_id}. Adding headers...")
+                    if not self.append_row(user_id, sheet_name, headers):
+                        logger.error(f"Failed to add headers to newly created sheet '{sheet_name}' for user {user_id}")
                 else:
-                    worksheet = spreadsheet.worksheet(sheet_name)
-                    actual_headers = worksheet.row_values(1)
-
-                    if not actual_headers:
-                        worksheet.append_row(headers)
-                        logger.info(f"Headers added to empty internal sheet '{sheet_name}' in '{spreadsheet.title}' for user {user_id}")
-                    elif actual_headers != headers:
-                        logger.warning(
-                            f"Headers in existing internal sheet '{sheet_name}' do not match expected for user {user_id} in '{spreadsheet.title}'. "
-                            "Not modifying existing headers."
-                        )
+                    worksheet = self.get_worksheet(user_id, sheet_name)
+                    if worksheet:
+                        actual_headers = worksheet.row_values(1)
+                        if not actual_headers:
+                            logger.info(f"Headers missing in internal sheet '{sheet_name}'. Adding headers...")
+                            if not self.append_row(user_id, sheet_name, headers):
+                                logger.error(f"Failed to add headers to existing empty sheet '{sheet_name}' for user {user_id}")
+                        elif actual_headers != headers:
+                            logger.warning(
+                                f"Headers in existing internal sheet '{sheet_name}' do not match expected for user {user_id} in '{spreadsheet.title}'. "
+                                "Not modifying existing headers."
+                            )
+                    else:
+                        logger.error(f"Failed to retrieve existing worksheet '{sheet_name}' for header check for user {user_id}.")
         except gspread.exceptions.APIError as e:
             logger.error(f"API error ensuring internal sheets exist for user {user_id} in '{spreadsheet.title}': {e}")
             raise
