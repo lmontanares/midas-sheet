@@ -26,7 +26,7 @@ expense_categories:
     - Reparaciones / Mantenimiento
     - Registro / Licencia
 
-  VIDA_DIARIA:
+  VIDA-DIARIA:
     - Comestibles
     - Comer Fuera
     - Ropa
@@ -48,7 +48,7 @@ expense_categories:
     - Veterinario
     - Seguro de Vida
 
-  VACACIONES_FESTIVOS:
+  VACACIONES-FESTIVOS:
     - Pasajes Aéreos
     - Alojamiento
     - Comida
