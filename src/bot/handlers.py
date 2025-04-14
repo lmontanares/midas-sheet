@@ -4,13 +4,14 @@ Message and command handlers for the Telegram bot.
 
 import datetime
 
+from gspread.exceptions import APIError, WorksheetNotFound  # Import other relevant exceptions
 from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
 from src.config.categories import category_manager
-from src.sheets.operations import SheetsOperations
+from src.sheets.operations import MissingHeadersError, SheetsOperations
 
 
 def get_category_keyboard(expense_type: str = "gasto") -> InlineKeyboardMarkup:
@@ -195,29 +196,29 @@ async def register_transaction(
     user = update.effective_user
     user_id = str(user.id)
     sheets_ops: SheetsOperations = context.bot_data.get("sheets_operations")
-    try:
-        if expense_type == "gasto":
-            sheet_name = "gastos"
-            row_data = [
-                date,
-                user.username or user.first_name,
-                category,
-                subcategory,
-                amount,
-                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                comment,
-            ]
-        elif expense_type == "ingreso":
-            sheet_name = "ingresos"
-            row_data = [
-                date,
-                user.username or user.first_name,
-                category,
-                amount,
-                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                comment,
-            ]
+    if expense_type == "gasto":
+        sheet_name = "gastos"
+        row_data = [
+            date,
+            user.username or user.first_name,
+            category,
+            subcategory,
+            amount,
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            comment,
+        ]
+    elif expense_type == "ingreso":
+        sheet_name = "ingresos"
+        row_data = [
+            date,
+            user.username or user.first_name,
+            category,
+            amount,
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            comment,
+        ]
 
+    try:
         sheets_ops.append_row(user_id, sheet_name, row_data)
         sign = "-" if expense_type == "gasto" else "+"
 
@@ -233,12 +234,35 @@ async def register_transaction(
 
         await update.effective_message.reply_text(confirm_message)
 
+    except MissingHeadersError as e:
+        logger.error(f"Header mismatch error for user {user_id}: {e}")
+        await update.effective_message.reply_text(
+            f"❌ Error: Las cabeceras de la hoja '{e.sheet_name}' no son correctas.\n"
+            f"Esperadas: `{e.expected}`\n"
+            f"Encontradas: `{e.actual}`\n\n"
+            "Por favor, corrige las cabeceras en tu Google Sheet o asegúrate de que la hoja exista y tenga datos.",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+    except WorksheetNotFound:
+        logger.error(f"Worksheet '{sheet_name}' not found for user {user_id} during append.")
+        await update.effective_message.reply_text(
+            f"❌ Error: No se encontró la hoja '{sheet_name}' en tu Google Sheet activo. "
+            "Asegúrate de que exista o selecciona la hoja correcta con /sheet."
+        )
+    except APIError as e:
+        logger.error(f"Google Sheets API error during append for user {user_id}: {e}")
+        await update.effective_message.reply_text(
+            "❌ Error de API al intentar registrar la transacción en Google Sheets. Verifica tu conexión o los permisos de la hoja."
+        )
+    except RuntimeError as e:
+        logger.error(f"Runtime/Auth error during append for user {user_id}: {e}")
+        await update.effective_message.reply_text("❌ Error de autenticación al registrar. Intenta usar /auth de nuevo.")
     except ValueError as e:
-        await update.effective_message.reply_text(f"❌ Error: {str(e)}")
-        logger.error(f"Error adding transaction: {e}")
+        logger.error(f"Configuration error adding transaction for user {user_id}: {e}")
+        await update.effective_message.reply_text(f"❌ Error de configuración: {str(e)}")
     except Exception as e:
-        await update.effective_message.reply_text("❌ Error al registrar la transacción")
-        logger.exception(f"Error no controlado al agregar transacción: {e}")
+        await update.effective_message.reply_text("❌ Error inesperado al registrar la transacción en la hoja.")
+        logger.exception(f"Unhandled error adding transaction for user {user_id}: {e}")
 
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

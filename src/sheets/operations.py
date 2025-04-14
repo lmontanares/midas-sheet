@@ -6,6 +6,7 @@ Interacts with the database to retrieve the user's active spreadsheet.
 from typing import Any
 
 import gspread
+from gspread.exceptions import APIError, WorksheetNotFound
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -14,11 +15,28 @@ from ..db.database import SessionLocal, UserSheet
 from .client import GoogleSheetsClient
 
 
+class MissingHeadersError(Exception):
+    """Raised when the sheet headers do not match the expected headers."""
+
+    def __init__(self, sheet_name: str, expected: list[str], actual: list[str] | None) -> None:
+        self.sheet_name = sheet_name
+        self.expected = expected
+        self.actual = actual if actual else []
+        message = f"Header mismatch in sheet '{sheet_name}'. Expected: {expected}, Found: {self.actual}"
+        super().__init__(message)
+
+
 class SheetsOperations:
     """
     Provides high-level operations for manipulating Google Sheets data.
     Retrieves the user's active spreadsheet from the database.
     """
+
+    # Define expected headers as a class attribute
+    REQUIRED_SHEETS = {
+        "gastos": ["Fecha", "Usuario", "Categoría", "Subcategoría", "Monto", "Timestamp", "Comentario"],
+        "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp", "Comentario"],
+    }
 
     def __init__(self, client: GoogleSheetsClient) -> None:
         """
@@ -95,11 +113,7 @@ class SheetsOperations:
 
         logger.debug(f"Ensuring internal sheets exist in '{spreadsheet.title}' for user {user_id}")
 
-        required_sheets = {
-            "gastos": ["Fecha", "Usuario", "Categoría", "Subcategoría", "Monto", "Timestamp", "Comentario"],
-            "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp", "Comentario"],
-        }
-
+        required_sheets = self.REQUIRED_SHEETS
         try:
             existing_sheets = [ws.title for ws in spreadsheet.worksheets()]
 
@@ -124,7 +138,7 @@ class SheetsOperations:
                             )
                     else:
                         logger.error(f"Failed to retrieve existing worksheet '{sheet_name}' for header check for user {user_id}.")
-        except gspread.exceptions.APIError as e:
+        except APIError as e:
             logger.error(f"API error ensuring internal sheets exist for user {user_id} in '{spreadsheet.title}': {e}")
             raise
         except Exception as e:
@@ -167,13 +181,13 @@ class SheetsOperations:
             logger.debug(f"Retrieved worksheet '{sheet_name}' from spreadsheet '{spreadsheet.title}' for user {user_id}")
             return worksheet
 
-        except gspread.exceptions.WorksheetNotFound:
+        except WorksheetNotFound:
             logger.error(f"Internal worksheet '{sheet_name}' not found in active sheet for user {user_id}.")
             return None
         except RuntimeError as e:
             logger.error(f"Authentication error in get_worksheet for user {user_id}: {e}")
             raise
-        except gspread.exceptions.APIError as e:
+        except APIError as e:
             logger.error(f"API error getting worksheet '{sheet_name}' for user {user_id}: {e}")
             raise
         except Exception as e:
@@ -183,27 +197,56 @@ class SheetsOperations:
             if db:
                 db.close()
 
-    def append_row(self, user_id: str, sheet_name: str, values: list[Any]) -> bool:
+    def append_row(self, user_id: str, sheet_name: str, values: list[Any]) -> None:
         """
-        Adds a row of data to record expense or income transactions.
+        Adds a row of data after validating sheet headers.
 
         Args:
             user_id: User's unique ID
-            sheet_name: Worksheet name to add data to ("gastos" or "ingresos")
-            values: List of values to add as a new row
+            sheet_name: Worksheet name ("gastos" or "ingresos")
+            values: List of values for the new row
 
-        Returns:
-            True if operation successful, False otherwise.
+        Raises:
+            MissingHeadersError: If sheet headers don't match expected headers.
+            RuntimeError: If user not authenticated.
+            APIError: If there are issues with the Sheets API.
+            WorksheetNotFound: If the target sheet doesn't exist.
+            Exception: For other unexpected errors during worksheet access or append.
         """
+        worksheet = None
         try:
             worksheet = self.get_worksheet(user_id, sheet_name)
             if not worksheet:
-                logger.error(f"Could not get worksheet '{sheet_name}' to append row for user {user_id}.")
-                return False
+                raise WorksheetNotFound(f"Worksheet '{sheet_name}' not found for user {user_id}.")
+
+            expected_headers = self.REQUIRED_SHEETS.get(sheet_name)
+            if not expected_headers:
+                raise ValueError(f"No expected headers defined for sheet name: {sheet_name}")
+
+            try:
+                actual_headers = worksheet.row_values(1)
+            except APIError as api_err:
+                logger.error(f"API error fetching headers for sheet '{sheet_name}', user {user_id}: {api_err}")
+                raise
+            except Exception as head_err:
+                logger.error(f"Error fetching headers for sheet '{sheet_name}', user {user_id}: {head_err}")
+                raise MissingHeadersError(sheet_name, expected_headers, None) from head_err
+
+            if not actual_headers or actual_headers != expected_headers:
+                logger.warning(
+                    f"Header mismatch for user {user_id} in sheet '{sheet_name}'. "
+                    f"Expected: {expected_headers}, Found: {actual_headers}. Aborting append."
+                )
+                raise MissingHeadersError(sheet_name, expected_headers, actual_headers)
 
             worksheet.append_row(values)
-            logger.info(f"Data appended to sheet '{sheet_name}' for user {user_id}")
-            return True
+            logger.info(f"Data appended to sheet '{sheet_name}' for user {user_id} after header validation.")
+
+        except MissingHeadersError:
+            raise
+        except (RuntimeError, APIError, WorksheetNotFound) as e:
+            logger.error(f"Error during append operation for user {user_id}, sheet '{sheet_name}': {e}")
+            raise
         except Exception as e:
-            logger.error(f"Failed to append row to sheet '{sheet_name}' for user {user_id}: {e}")
-            return False
+            logger.exception(f"Unexpected error appending row to sheet '{sheet_name}' for user {user_id}: {e}")
+            raise
