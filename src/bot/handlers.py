@@ -106,7 +106,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     /sheet <ID> - Selecciona una hoja de cálculo específica
     /agregar - Muestra las categorías disponibles para registrar una transacción
-    /recargar - Recarga las categorías desde el archivo de configuración (global)
     /logout - Cierra sesión y revoca acceso
 
     *Gestión de categorías (personalizadas por usuario):*
@@ -158,36 +157,6 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     except Exception as e:
         logger.error(f"Error al mostrar el selector de tipo: {e}")
         await update.message.reply_text("❌ Error al iniciar el proceso de registro")
-
-
-async def reload_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handles /recargar command to refresh categories for dynamic configuration.
-
-    Args:
-        update: Telegram Update object
-        context: Handler context
-    """
-    user = update.effective_user
-
-    try:
-        category_manager.reload_categories()
-
-        num_expense_cats = len(category_manager.get_expense_category_names())
-        num_income_cats = len(category_manager.income_categories)
-        num_total_subcats = sum(len(subcats) for subcats in category_manager.expense_categories.values())
-
-        message = f"✅ Categorías recargadas correctamente:\n"
-        message += f"- Categorías de gastos: *{num_expense_cats}*\n"
-        message += f"- Subcategorías totales: *{num_total_subcats}*\n"
-        message += f"- Categorías de ingresos: *{num_income_cats}*"
-
-        await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
-        logger.info(f"Categories reloaded by {user.username or user.first_name}")
-
-    except Exception as e:
-        logger.error(f"Error reloading categories: {e}")
-        await update.message.reply_text(f"❌ Error al recargar las categorías: {str(e)}")
 
 
 async def register_transaction(

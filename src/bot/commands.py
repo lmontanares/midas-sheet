@@ -18,7 +18,6 @@ def get_commands() -> list[BotCommand]:
         BotCommand("auth", "Autoriza acceso a tus hojas de Google"),
         BotCommand("sheet", "Selecciona una hoja de cálculo específica"),
         BotCommand("agregar", "Agrega una transacción financiera"),
-        BotCommand("recargar", "Recarga las categorías desde el archivo de configuración"),
         BotCommand("logout", "Cierra sesión y revoca acceso"),
         BotCommand("categorias", "Muestra tus categorías actuales"),
         BotCommand("editarcat", "Edita tus categorías personalizadas"),

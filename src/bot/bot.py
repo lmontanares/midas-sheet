@@ -69,7 +69,6 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("start", start_command))
         self.application.add_handler(CommandHandler("help", help_command))
         self.application.add_handler(CommandHandler("agregar", add_command))
-        self.application.add_handler(CommandHandler("recargar", reload_command))
 
         # Register OAuth handlers
         self.application.add_handler(CommandHandler("auth", auth_command))
