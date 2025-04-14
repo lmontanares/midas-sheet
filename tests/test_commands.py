@@ -11,11 +11,11 @@ from src.bot.commands import get_commands
 def test_get_commands_structure():
     """Verifica la estructura de la lista de comandos."""
     commands = get_commands()
-    
-    # Verificar que se devuelve una lista
+
+    # Verify that a list is returned
     assert isinstance(commands, list)
-    
-    # Verificar que todos los elementos son instancias de BotCommand
+
+    # Verify that all elements are instances of BotCommand
     for cmd in commands:
         assert isinstance(cmd, BotCommand)
 
@@ -23,15 +23,15 @@ def test_get_commands_structure():
 def test_get_commands_content():
     """Verifica el contenido de la lista de comandos."""
     commands = get_commands()
-    
-    # Crear un diccionario para verificar los comandos y sus descripciones
+
+    # Create a dictionary to verify commands and their descriptions
     cmd_dict = {cmd.command: cmd.description for cmd in commands}
-    
-    # Verificar los comandos básicos que deberían estar presentes
+
+    # Verify the basic commands that should be present
     assert "start" in cmd_dict
     assert "help" in cmd_dict
-    
-    # Verificar que las descripciones no estén vacías
+
+    # Verify that descriptions are not empty
     for description in cmd_dict.values():
         assert description.strip(), "La descripción no debe estar vacía"
 
@@ -42,13 +42,13 @@ def test_get_commands_extensibility():
     y esté preparada para añadir más comandos en el futuro.
     """
     commands = get_commands()
-    
-    # Verificar los comandos mínimos requeridos
+
+    # Verify the minimum required commands
     assert len(commands) >= 2
-    
-    # Verificar que no hay comandos duplicados
+
+    # Verify that there are no duplicate commands
     command_names = [cmd.command for cmd in commands]
     assert len(command_names) == len(set(command_names)), "No debe haber comandos duplicados"
-    
-    # Comentario en el código original indica que se añadirán más comandos
-    # La estructura debe permitir esta extensibilidad
+
+    # Comment in the original code indicates that more commands will be added
+    # The structure should allow for this extensibility

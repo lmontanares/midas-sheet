@@ -281,7 +281,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         expense_type = data[1]
 
         try:
-            # Cargar las categorías personalizadas del usuario
+            # Load user's custom categories
             db = SessionLocal()
             try:
                 category_manager.load_user_categories(user_id, db)
@@ -313,7 +313,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Different behavior for expenses and income
         if expense_type == "gasto":
             try:
-                # Cargar las categorías personalizadas del usuario
+                # Load user's custom categories
                 db = SessionLocal()
                 try:
                     category_manager.load_user_categories(user_id, db)
@@ -357,7 +357,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         expense_type = data[1]
 
         try:
-            # Cargar las categorías personalizadas del usuario
+            # Load user's custom categories
             db = SessionLocal()
             try:
                 category_manager.load_user_categories(user_id, db)
@@ -445,7 +445,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text(
                 f"*{category_display}* - *{amount:.2f}*\n\nPor favor escribe un comentario para esta transacción:", parse_mode="Markdown"
             )
-        else:  # option == "no"
+        else:
             # User doesn't want to add comment, record transaction without comment
             transaction = context.user_data["pending_transaction"]
             expense_type = transaction["expense_type"]
@@ -663,13 +663,13 @@ async def show_categories_command(update: Update, context: ContextTypes.DEFAULT_
     user = update.effective_user
     user_id = str(user.id)
 
-    # Verificar autenticación
+    # Verify authentication
     oauth_manager = context.bot_data.get("oauth_manager")
     if not oauth_manager or not oauth_manager.is_authenticated(user_id):
         await update.message.reply_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
         return
 
-    # Obtener categorías del usuario
+    # Get user categories
     db = SessionLocal()
     try:
         category_manager.load_user_categories(user_id, db)
@@ -677,24 +677,18 @@ async def show_categories_command(update: Update, context: ContextTypes.DEFAULT_
         expense_categories = category_manager.get_expense_categories(user_id)
         income_categories = category_manager.get_income_categories(user_id)
 
-        # Construir mensaje
         message = "*Tus categorías personalizadas:*\n\n"
-
-        # Categorías de gastos
         message += "*CATEGORÍAS DE GASTOS:*\n"
         for category, subcategories in expense_categories.items():
             message += f"• {category}\n"
             for subcategory in subcategories:
                 message += f"  - {subcategory}\n"
 
-        # Categorías de ingresos
         message += "\n*CATEGORÍAS DE INGRESOS:*\n"
         for category in income_categories:
             message += f"• {category}\n"
 
-        # Añadir instrucciones
         message += "\nPuedes personalizar tus categorías con el comando /editarcat"
-
         await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
 
     except Exception as e:
@@ -715,13 +709,13 @@ async def reset_categories_command(update: Update, context: ContextTypes.DEFAULT
     user = update.effective_user
     user_id = str(user.id)
 
-    # Verificar autenticación
+    # Verify authentication
     oauth_manager = context.bot_data.get("oauth_manager")
     if not oauth_manager or not oauth_manager.is_authenticated(user_id):
         await update.message.reply_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
         return
 
-    # Crear botones de confirmación
+    # Create confirmation buttons
     keyboard = InlineKeyboardMarkup(
         [
             [
@@ -747,13 +741,13 @@ async def edit_categories_command(update: Update, context: ContextTypes.DEFAULT_
     user = update.effective_user
     user_id = str(user.id)
 
-    # Verificar autenticación
+    # Verify authentication
     oauth_manager = context.bot_data.get("oauth_manager")
     if not oauth_manager or not oauth_manager.is_authenticated(user_id):
         await update.message.reply_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
         return
 
-    # Mostrar opciones para editar
+    # Show editing options
     keyboard = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("✏️ Editar categorías de gastos", callback_data="edit_categories|expense")],
@@ -777,37 +771,33 @@ async def process_yaml_import(update: Update, context: ContextTypes.DEFAULT_TYPE
     user = update.effective_user
     user_id = str(user.id)
 
-    # Verificar si hay un documento adjunto
+    # Check if there is an attached document
     if not update.message.document:
         await update.message.reply_text("❌ Por favor, adjunta un archivo YAML con tus categorías.")
         return
 
-    # Verificar que sea un archivo YAML
+    # Verify it is a YAML file
     file = update.message.document
     if not file.file_name.endswith((".yaml", ".yml")):
         await update.message.reply_text("❌ El archivo debe tener extensión .yaml o .yml")
         return
 
     try:
-        # Descargar archivo
+        # Download file
         file_obj = await context.bot.get_file(file.file_id)
         yaml_content = await file_obj.download_as_bytearray()
         yaml_text = yaml_content.decode("utf-8")
 
-        # Parsear YAML
         categories_data = yaml.safe_load(yaml_text)
 
-        # Validar estructura
         if not isinstance(categories_data, dict):
             await update.message.reply_text("❌ Formato incorrecto. El archivo debe contener un diccionario YAML.")
             return
 
-        # Verificar campos requeridos
         if "expense_categories" not in categories_data or "income_categories" not in categories_data:
             await update.message.reply_text("❌ Formato incorrecto. El archivo debe contener 'expense_categories' y 'income_categories'.")
             return
 
-        # Validar tipos
         expense_categories = categories_data["expense_categories"]
         income_categories = categories_data["income_categories"]
 
@@ -815,13 +805,11 @@ async def process_yaml_import(update: Update, context: ContextTypes.DEFAULT_TYPE
             await update.message.reply_text("❌ Formato incorrecto. 'expense_categories' debe ser un diccionario y 'income_categories' una lista.")
             return
 
-        # Verificar subcategorías
         for category, subcategories in expense_categories.items():
             if not isinstance(subcategories, list):
                 await update.message.reply_text(f"❌ Formato incorrecto. Las subcategorías de '{category}' deben ser una lista.")
                 return
 
-        # Guardar categorías
         db = SessionLocal()
         try:
             success = category_manager.save_user_categories(user_id, expense_categories, income_categories, db)
@@ -854,7 +842,6 @@ async def export_categories_to_yaml(update: Update, context: ContextTypes.DEFAUL
     user = update.effective_user
     user_id = str(user.id)
 
-    # Obtener categorías del usuario
     db = SessionLocal()
     try:
         category_manager.load_user_categories(user_id, db)
@@ -862,20 +849,16 @@ async def export_categories_to_yaml(update: Update, context: ContextTypes.DEFAUL
         expense_categories = category_manager.get_expense_categories(user_id)
         income_categories = category_manager.get_income_categories(user_id)
 
-        # Crear diccionario de categorías
         categories_data = {"expense_categories": expense_categories, "income_categories": income_categories}
 
-        # Convertir a YAML
         yaml_content = yaml.safe_dump(categories_data, allow_unicode=True, sort_keys=False)
 
-        # Crear archivo temporal
         import tempfile
 
         temp_file = tempfile.NamedTemporaryFile(suffix=".yaml", delete=False)
         temp_file.write(yaml_content.encode("utf-8"))
         temp_file.close()
 
-        # Enviar archivo
         with open(temp_file.name, "rb") as file:
             await context.bot.send_document(
                 chat_id=update.effective_chat.id,
@@ -884,7 +867,6 @@ async def export_categories_to_yaml(update: Update, context: ContextTypes.DEFAUL
                 caption="📦 Tus categorías personalizadas",
             )
 
-        # Eliminar archivo temporal
         import os
 
         os.unlink(temp_file.name)

@@ -39,7 +39,7 @@ def mock_context(mocker):
 
 @pytest.mark.asyncio
 async def test_start_command_greeting(mock_telegram_update, mock_context):
-    """Prueba que el comando /start salude al usuario por su nombre."""
+    """Test that the /start command greets the user by name."""
     # Act
     await start_command(mock_telegram_update, mock_context)
 
@@ -51,7 +51,7 @@ async def test_start_command_greeting(mock_telegram_update, mock_context):
 
 @pytest.mark.asyncio
 async def test_help_command_content(mock_telegram_update, mock_context):
-    """Prueba que el comando /help muestre información sobre todos los comandos disponibles."""
+    """Test that the /help command shows information about all available commands."""
     # Act
     await help_command(mock_telegram_update, mock_context)
 
@@ -59,17 +59,17 @@ async def test_help_command_content(mock_telegram_update, mock_context):
     mock_telegram_update.message.reply_text.assert_awaited_once()
     help_text = mock_telegram_update.message.reply_text.call_args[0][0]
 
-    # Verificar que menciona todos los comandos disponibles actualmente
+    # Verify that it mentions all currently available commands
     assert "/start" in help_text
     assert "/help" in help_text
 
-    # Verificar que se está usando Markdown
+    # Verify that Markdown is being used
     assert mock_telegram_update.message.reply_text.call_args[1].get("parse_mode") == "Markdown"
 
 
 @pytest.mark.asyncio
 async def test_error_handler_logging(mock_telegram_update, mock_context, mocker):
-    """Prueba que el manejador de errores registre correctamente los errores."""
+    """Test that the error handler correctly logs errors."""
     # Arrange
     mock_context.error = ValueError("Error de prueba")
     mock_logger = mocker.patch("src.bot.handlers.logger.exception")
@@ -84,7 +84,7 @@ async def test_error_handler_logging(mock_telegram_update, mock_context, mocker)
 
 @pytest.mark.asyncio
 async def test_error_handler_user_message(mock_telegram_update, mock_context):
-    """Prueba que el manejador de errores envíe un mensaje amigable al usuario."""
+    """Test that the error handler sends a friendly message to the user."""
     # Arrange
     mock_context.error = Exception("Error interno")
 
@@ -100,29 +100,29 @@ async def test_error_handler_user_message(mock_telegram_update, mock_context):
 
 @pytest.mark.asyncio
 async def test_error_handler_no_message(mock_context, mocker):
-    """Prueba que el manejador de errores no falle cuando no hay mensaje efectivo."""
+    """Test that the error handler does not fail when there is no effective message."""
     # Arrange
     mock_update = mocker.Mock(spec=Update)
     mock_update.effective_message = None
     mock_context.error = Exception("Error sin mensaje")
 
-    # Act & Assert (no debería lanzar excepción)
+    # Act & Assert (should not raise exception)
     await error_handler(mock_update, mock_context)
 
 
 @pytest.mark.asyncio
 async def test_error_handler_with_none_update(mock_context):
-    """Prueba que el manejador de errores maneje correctamente casos sin update."""
+    """Test that the error handler correctly handles cases without an update."""
     # Arrange
     mock_context.error = Exception("Error sin update")
 
-    # Act & Assert (no debería lanzar excepción)
+    # Act & Assert (should not raise exception)
     await error_handler(None, mock_context)
 
 
 @pytest.mark.asyncio
 async def test_agregar_command(mock_telegram_update, mock_context, mocker):
-    """Prueba que el comando /agregar muestre botones con categorías."""
+    """Test that the /agregar command shows buttons with categories."""
     # Arrange
     mock_sheets = mocker.Mock()
     mock_sheets.get_column_values.return_value = ["Categorías", "COMIDA", "TRANSPORTE", "SALARIO", "comision"]
@@ -133,14 +133,14 @@ async def test_agregar_command(mock_telegram_update, mock_context, mocker):
 
     # Assert
     mock_telegram_update.message.reply_text.assert_awaited_once()
-    # Verificar que se llamó a reply_text con un reply_markup (teclado)
+    # Verify that reply_text was called with a reply_markup (keyboard)
     assert "reply_markup" in mock_telegram_update.message.reply_text.call_args[1]
-    # Verificar que se solicitaron las categorías desde la hoja de cálculo
-    mock_sheets.get_column_values.assert_called_once_with("General", "G")[1:-1]
+    # Verify that categories were requested from the spreadsheet
+    mock_sheets.get_column_values.assert_called_once_with("General", "G")[1:-1]  # TODO: This assertion seems incorrect, review sheet structure/mock
 
 
 def test_get_categoria_keyboard():
-    """Prueba que el teclado de categorías solo incluya las categorías en mayúsculas."""
+    """Test that the category keyboard only includes uppercase categories."""
     # Arrange
     categorias = ["COMIDA", "transporte", "SALARIO", "ocio"]
 
@@ -148,23 +148,23 @@ def test_get_categoria_keyboard():
     keyboard = get_cat_keyboard(categorias, "gasto")
 
     # Assert
-    # Verificar que solo hay botones para las categorías en mayúsculas (más la fila de botones de tipo)
-    assert len(keyboard.inline_keyboard) == 3  # 1 fila de botones de tipo + 2 categorías en mayúsculas
+    # Verify that there are only buttons for uppercase categories (plus the type button row)
+    assert len(keyboard.inline_keyboard) == 3  # 1 row of type buttons + 2 uppercase categories
 
-    # Verificar que los botones de categorías son correctos
+    # Verify that the category buttons are correct
     assert keyboard.inline_keyboard[1][0].text == "COMIDA"
     assert keyboard.inline_keyboard[1][0].callback_data == "gasto|COMIDA"
     assert keyboard.inline_keyboard[2][0].text == "SALARIO"
     assert keyboard.inline_keyboard[2][0].callback_data == "gasto|SALARIO"
 
-    # Verificar que los botones de tipo están presentes
+    # Verify that the type buttons are present
     assert keyboard.inline_keyboard[0][0].text == "GASTOS"
     assert keyboard.inline_keyboard[0][1].text == "INGRESOS"
 
 
 @pytest.mark.asyncio
 async def test_button_callback_selector(mocker):
-    """Prueba que el callback de botones actualice el mensaje al seleccionar tipo."""
+    """Test that the button callback updates the message when selecting a type."""
     # Arrange
     mock_query = mocker.Mock()
     mock_query.answer = mocker.AsyncMock()
@@ -185,15 +185,15 @@ async def test_button_callback_selector(mocker):
     # Assert
     mock_query.answer.assert_awaited_once()
     mock_query.edit_message_text.assert_awaited_once()
-    # Verificar que el mensaje menciona "ingreso"
+    # Verify that the message mentions "ingreso" (income)
     assert "ingreso" in mock_query.edit_message_text.call_args[0][0]
-    # Verificar que se incluyó un reply_markup
+    # Verify that a reply_markup was included
     assert "reply_markup" in mock_query.edit_message_text.call_args[1]
 
 
 @pytest.mark.asyncio
 async def test_button_callback_categoria(mocker):
-    """Prueba que el callback de botones solicite el monto al seleccionar categoría."""
+    """Test that the button callback requests the amount when selecting a category."""
     # Arrange
     mock_query = mocker.Mock()
     mock_query.answer = mocker.AsyncMock()
@@ -212,11 +212,11 @@ async def test_button_callback_categoria(mocker):
     # Assert
     mock_query.answer.assert_awaited_once()
     mock_query.edit_message_text.assert_awaited_once()
-    # Verificar que el mensaje menciona "COMIDA"
+    # Verify that the message mentions "COMIDA" (FOOD)
     assert "COMIDA" in mock_query.edit_message_text.call_args[0][0]
-    # Verificar que se solicitó el monto
+    # Verify that the amount was requested
     assert "monto" in mock_query.edit_message_text.call_args[0][0].lower()
-    # Verificar que se guardaron los datos en user_data
+    # Verify that the data was saved in user_data
     assert "transaccion_pendiente" in mock_context.user_data
     assert mock_context.user_data["transaccion_pendiente"]["tipo"] == "gasto"
     assert mock_context.user_data["transaccion_pendiente"]["categoria"] == "COMIDA"

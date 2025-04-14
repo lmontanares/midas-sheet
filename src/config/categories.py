@@ -79,7 +79,7 @@ class CategoryManager:
             db_session: SQLAlchemy database session
         """
         try:
-            # Consultar categorías del usuario en la base de datos
+            # Query user categories from the database
             stmt = select(UserCategories).where(UserCategories.user_id == user_id)
             user_categories = db_session.scalars(stmt).first()
 
@@ -231,7 +231,7 @@ class CategoryManager:
             bool: True if successful, False otherwise
         """
         try:
-            # Eliminar categorías personalizadas de la base de datos
+            # Delete custom categories from the database
             stmt = select(UserCategories).where(UserCategories.user_id == user_id)
             existing = db_session.scalars(stmt).first()
 
@@ -239,7 +239,7 @@ class CategoryManager:
                 db_session.delete(existing)
                 db_session.commit()
 
-            # Actualizar la caché en memoria
+            # Update the in-memory cache
             if user_id in self._user_categories:
                 del self._user_categories[user_id]
 
