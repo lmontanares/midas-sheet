@@ -11,7 +11,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..db.database import SessionLocal, UserCategories
+from ..db.database import UserCategories
 
 
 class CategoryManager:

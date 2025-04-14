@@ -1,5 +1,4 @@
 import threading
-import webbrowser
 from typing import Callable
 from urllib.parse import urlparse
 
