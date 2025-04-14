@@ -86,12 +86,12 @@ def main() -> None:
     """
     Main function that starts the application.
     """
-    log_dir = Path(__file__).parent / "logs"
-    log_dir.mkdir(exist_ok=True)
-    setup_logging(log_dir / "app.log")
 
     try:
         config = Config()
+        log_dir = Path(__file__).parent / "logs"
+        log_dir.mkdir(exist_ok=True)
+        setup_logging(log_dir / "app.log", level=config.log_level)
 
         init_db()
 

@@ -151,3 +151,13 @@ class Config:
         if not url:
             raise ValueError("DATABASE_URL not found in environment variables")
         return url
+
+    @property
+    def log_level(self) -> str:
+        """
+        Gets the logging level from environment variables.
+
+        Returns:
+            Logging level string (e.g., "INFO", "DEBUG")
+        """
+        return os.getenv("LOG_LEVEL", "INFO")
