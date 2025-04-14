@@ -65,13 +65,6 @@ class OAuthManager:
             logger.error(f"Failed to load or parse client secrets file {self.client_secrets_file}: {e}")
             raise ValueError(f"Invalid client secrets file: {e}") from e
 
-    def _get_client_id(self) -> str:
-        try:
-            return self._client_config["web"]["client_id"]
-        except KeyError:
-            logger.error("Client ID not found in client secrets file.")
-            raise ValueError("Client ID missing in client secrets configuration.")
-
     def _get_client_secret(self) -> str:
         try:
             return self._client_config["web"]["client_secret"]

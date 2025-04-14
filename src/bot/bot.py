@@ -19,7 +19,6 @@ from .handlers import (
     help_command,
     process_yaml_import,
     register_bot_commands,
-    reload_command,
     reset_categories_command,
     show_categories_command,
     start_command,

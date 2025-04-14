@@ -158,16 +158,6 @@ class OAuthServer:
             scheme = "https"
         return f"{scheme}://{self.host}:{self.port}/oauth2callback"
 
-    def open_browser(self, url: str) -> bool:
-        """Opens a web browser to the specified URL for local testing."""
-        logger.info(f"Attempting to open browser to: {url}")
-        try:
-            webbrowser.open(url)
-            return True
-        except Exception as e:
-            logger.error(f"Failed to open browser: {e}")
-            return False
-
     def _generate_success_page(self) -> str:
         """Generates a simple HTML success page for user feedback."""
         return """

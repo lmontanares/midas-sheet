@@ -251,19 +251,6 @@ class CategoryManager:
             db_session.rollback()
             return False
 
-    def reload_categories(self) -> None:
-        """
-        Reloads default categories from YAML file.
-
-        Useful when the configuration file has been modified.
-
-        Raises:
-            Same as _load_default_categories().
-        """
-        self._load_default_categories()
-        # También limpiar la caché de categorías de usuarios para que se recarguen
-        self._user_categories = {}
-
 
 # Global instance of category manager for use throughout the application
 category_manager = CategoryManager()

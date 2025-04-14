@@ -70,17 +70,6 @@ class Config:
         return path
 
     @property
-    def oauth_tokens_dir(self) -> str:
-        """
-        Gets directory for storing OAuth tokens for persistent authentication.
-
-        Returns:
-            Path to tokens directory
-        """
-        default_dir = str(Path.cwd() / "tokens")
-        return os.getenv("OAUTH_TOKENS_DIR", default_dir)
-
-    @property
     def oauth_server_host(self) -> str:
         """
         Gets host for OAuth server for authentication flow.

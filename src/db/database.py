@@ -8,7 +8,6 @@ from loguru import logger
 from sqlalchemy import (
     BLOB,
     Boolean,
-    Column,
     DateTime,
     ForeignKey,
     String,
@@ -99,9 +98,7 @@ class UserCategories(Base):
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.user_id"), index=True)
     categories_json: Mapped[str] = mapped_column(Text, nullable=False)  # Categorías en formato JSON
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     def __repr__(self) -> str:
         return f"<UserCategories(user_id='{self.user_id}')>"
