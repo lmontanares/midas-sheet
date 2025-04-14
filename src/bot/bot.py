@@ -14,10 +14,14 @@ from .handlers import (
     amount_handler,
     button_callback,
     comment_handler,
+    edit_categories_command,
     error_handler,
     help_command,
+    process_yaml_import,
     register_bot_commands,
     reload_command,
+    reset_categories_command,
+    show_categories_command,
     start_command,
 )
 
@@ -73,6 +77,11 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("sheet", sheet_command))
         self.application.add_handler(CommandHandler("logout", logout_command))
 
+        # Register category management handlers
+        self.application.add_handler(CommandHandler("categorias", show_categories_command))
+        self.application.add_handler(CommandHandler("editarcat", edit_categories_command))
+        self.application.add_handler(CommandHandler("resetcat", reset_categories_command))
+
         # Button callback handler
         self.application.add_handler(CallbackQueryHandler(button_callback))
 
@@ -88,6 +97,9 @@ class TelegramBot:
         self.application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND & filters.UpdateType.MESSAGE, amount_handler, block=True), group=2
         )
+
+        # Register file handler for category import
+        self.application.add_handler(MessageHandler(filters.Document.ALL & filters.UpdateType.MESSAGE, process_yaml_import, block=True), group=3)
 
         # Register error handler
         self.application.add_error_handler(error_handler)

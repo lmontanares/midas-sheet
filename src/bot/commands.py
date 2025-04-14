@@ -20,4 +20,7 @@ def get_commands() -> list[BotCommand]:
         BotCommand("agregar", "Agrega una transacción financiera"),
         BotCommand("recargar", "Recarga las categorías desde el archivo de configuración"),
         BotCommand("logout", "Cierra sesión y revoca acceso"),
+        BotCommand("categorias", "Muestra tus categorías actuales"),
+        BotCommand("editarcat", "Edita tus categorías personalizadas"),
+        BotCommand("resetcat", "Reinicia tus categorías a los valores predeterminados"),
     ]

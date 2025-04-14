@@ -90,6 +90,23 @@ class UserSheet(Base):
         return f"<UserSheet(user_id='{self.user_id}', sheet_id='{self.spreadsheet_id}')>"
 
 
+class UserCategories(Base):
+    """SQLAlchemy model for storing user-specific financial categories."""
+
+    __tablename__ = "user_categories"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.user_id"), index=True)
+    categories_json: Mapped[str] = mapped_column(Text, nullable=False)  # Categorías en formato JSON
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserCategories(user_id='{self.user_id}')>"
+
+
 # --- Database Initialization ---
 
 
