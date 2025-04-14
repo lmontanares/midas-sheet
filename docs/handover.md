@@ -76,9 +76,8 @@ All public methods and functions include complete type annotations, improving do
   - python-telegram-bot (v22.0): Framework for creating the bot
 - **Google Sheets:**
   - gspread: Library for interacting with Google Sheets
-  - google-auth: Base authentication with Google services
+  - google-auth: Base authentication (includes transport via requests)
   - google-auth-oauthlib: OAuth 2.0 authentication with Google
-  - google-auth-httplib2: Management of authenticated HTTP requests
 - **OAuth Server:**
   - Flask: Lightweight web server for handling OAuth redirections
 - **Security:**
@@ -93,13 +92,16 @@ All public methods and functions include complete type annotations, improving do
 - **Utilities:**
   - loguru: Advanced logging system
   - python-dotenv: Environment variable management
-  - pydantic: Data validation
   - pathlib: Modern file path handling
+  - requests: HTTP library (used by google-auth)
 - **Testing:**
   - pytest: Main testing framework
   - pytest-asyncio: Support for asynchronous tests
   - pytest-cov: Code coverage measurement
   - pytest-mock: Creation of mocks with native integration in pytest
+- **Development:**
+  - ruff: Linter and formatter
+  - vulture: Dead code detection
 
 ### Development Tools and Work Environment
 - Package manager: uv (modern alternative to pip)
@@ -184,9 +186,9 @@ The information flow begins when the user sends commands to the bot through Tele
 │   ├── test_commands.py  # Tests for bot commands
 │   ├── test_handlers.py  # Tests for bot handlers
 │   ├── test_sheets.py    # Tests for Google Sheets integration
-│   ├── test_auth.py      # Tests for OAuth authentication
-│   ├── test_categories.py # Tests for category management (NEW)
-│   ├── test_database.py  # Tests for database interactions (NEW)
+│   # (test_auth.py - Currently Missing)
+│   # (test_categories.py - Currently Missing)
+│   # (test_database.py - Currently Missing)
 │   ├── conftest.py       # Shared fixtures for tests
 │   └── README.md         # Test documentation
 │
@@ -196,14 +198,15 @@ The information flow begins when the user sends commands to the bot through Tele
 ├── logs/                 # Directory for log files
 │
 ├── main.py               # Application entry point
-├── finanzas.db           # SQLite database
+├── finanzas.db           # SQLite database (Runtime, not in repo)
 ├── pyproject.toml        # Python project configuration
 ├── pytest.ini            # pytest configuration
-├── .env                  # Environment variables (local)
+├── .env                  # Environment variables (Local, not in repo)
 ├── .env.example          # Example environment variables
-├── oauth_credentials.json # Google API OAuth credentials
+├── oauth_credentials.json # Google API OAuth credentials (Local, not in repo)
 └── README.md             # Main documentation
 ```
+# Note: Files like finanzas.db, .env, and oauth_credentials.json are generated/configured at runtime and are typically excluded from version control.
 
 ### Design Patterns Implemented
 - **Client Pattern**: Encapsulation of Google Sheets access in a client class (`GoogleSheetsClient`)
@@ -279,8 +282,8 @@ The information flow begins when the user sends commands to the bot through Tele
   - Tests for OAuth authentication
   - Tests for the redirection server
   - Mocks for external APIs (Telegram, Google)
-  - **Initial tests for database interactions (v3.2)**
-  - **Initial tests for category management (v3.3)**
+  - # (Tests for database interactions - Currently Missing)
+  - # (Tests for category management - Currently Missing)
 
 ### Progress and Achievements to Date
 - Complete implementation of the OAuth 2.0 authentication system
@@ -338,21 +341,21 @@ The information flow begins when the user sends commands to the bot through Tele
 - No comprehensive data validation for financial entries
 - Asynchronous loads for multiple components are not implemented optimally
 - No complete end-user documentation (especially for category editing)
-- Missing tests for some specific scenarios with OAuth functionalities:
-  - Complete integration tests for the OAuth flow
-  - Tests for expired token handling
+- **Missing tests for OAuth functionalities:**
+  - Integration tests for the OAuth flow
+  - Tests for expired token handling and revocation
   - Tests for communication between OAuth server and bot
-- **Missing comprehensive tests for database integration:**
-  - Data persistence tests between restarts
-  - Referential integrity tests
-  - Concurrency tests
+- **Missing tests for database integration:**
+  - Basic CRUD operations
+  - Data persistence between restarts
+  - Referential integrity
 - **Missing tests for encryption functionality:**
   - Token encryption and decryption tests
   - Recovery tests for decryption errors
   - Key management tests
-- **Missing comprehensive tests for custom category functionality:**
+- **Missing tests for custom category functionality:**
+  - Basic CRUD operations via commands
   - YAML import/export validation and edge cases
-  - Database interaction tests for categories (CRUD)
   - Integration tests with the `/agregar` flow using custom categories
   - Tests for `/resetcat` functionality
 - OAuth server closure handling could be improved to ensure clean termination
