@@ -1,7 +1,7 @@
 from google.auth.exceptions import GoogleAuthError
 from gspread.exceptions import APIError, SpreadsheetNotFound
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from telegram import Update
@@ -78,6 +78,10 @@ def _set_active_sheet(db: Session, user_id: str, spreadsheet_id: str, spreadshee
             existing_sheet.spreadsheet_title = spreadsheet_title
             logger.debug(f"Reactivated sheet {spreadsheet_id} for user {user_id}")
         else:
+            # Check if user has any other sheets and delete them
+            stmt_delete = delete(UserSheet).where(UserSheet.user_id == user_id)
+            db.execute(stmt_delete)
+
             # Insert new active sheet
             new_sheet = UserSheet(
                 user_id=user_id,
