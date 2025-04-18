@@ -119,25 +119,29 @@ class SheetsOperations:
 
             for sheet_name, headers in required_sheets.items():
                 if sheet_name not in existing_sheets:
-                    spreadsheet.add_worksheet(title=sheet_name, rows=1, cols=len(headers))
+                    # Create the worksheet if it doesn't exist
+                    worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=1, cols=len(headers))
                     logger.info(f"Internal sheet '{sheet_name}' created in '{spreadsheet.title}' for user {user_id}. Adding headers...")
-                    if not self.append_row(user_id, sheet_name, headers):
+                    # Use the append_row method with the spreadsheet parameter
+                    if not self.append_row(user_id, sheet_name, headers, spreadsheet=spreadsheet):
                         logger.error(f"Failed to add headers to newly created sheet '{sheet_name}' for user {user_id}")
                 else:
-                    worksheet = self.get_worksheet(user_id, sheet_name)
-                    if worksheet:
+                    # Get the worksheet directly from the spreadsheet object
+                    try:
+                        worksheet = spreadsheet.worksheet(sheet_name)
                         actual_headers = worksheet.row_values(1)
                         if not actual_headers:
                             logger.info(f"Headers missing in internal sheet '{sheet_name}'. Adding headers...")
-                            if not self.append_row(user_id, sheet_name, headers):
+                            # Use the append_row method with the spreadsheet parameter
+                            if not self.append_row(user_id, sheet_name, headers, spreadsheet=spreadsheet):
                                 logger.error(f"Failed to add headers to existing empty sheet '{sheet_name}' for user {user_id}")
                         elif actual_headers != headers:
                             logger.warning(
                                 f"Headers in existing internal sheet '{sheet_name}' do not match expected for user {user_id} in '{spreadsheet.title}'. "
                                 "Not modifying existing headers."
                             )
-                    else:
-                        logger.error(f"Failed to retrieve existing worksheet '{sheet_name}' for header check for user {user_id}.")
+                    except Exception as e:
+                        logger.error(f"Failed to retrieve existing worksheet '{sheet_name}' for header check for user {user_id}: {e}")
         except APIError as e:
             logger.error(f"API error ensuring internal sheets exist for user {user_id} in '{spreadsheet.title}': {e}")
             raise
@@ -197,7 +201,7 @@ class SheetsOperations:
             if db:
                 db.close()
 
-    def append_row(self, user_id: str, sheet_name: str, values: list[Any]) -> None:
+    def append_row(self, user_id: str, sheet_name: str, values: list[Any], spreadsheet: gspread.Spreadsheet | None = None) -> bool:
         """
         Adds a row of data after validating sheet headers.
 
@@ -205,6 +209,10 @@ class SheetsOperations:
             user_id: User's unique ID
             sheet_name: Worksheet name ("gastos" or "ingresos")
             values: List of values for the new row
+            spreadsheet: Optional spreadsheet object to use directly instead of retrieving from DB
+
+        Returns:
+            bool: True if append was successful, False otherwise
 
         Raises:
             MissingHeadersError: If sheet headers don't match expected headers.
@@ -215,7 +223,18 @@ class SheetsOperations:
         """
         worksheet = None
         try:
-            worksheet = self.get_worksheet(user_id, sheet_name)
+            if spreadsheet:
+                # Use the provided spreadsheet directly
+                try:
+                    worksheet = spreadsheet.worksheet(sheet_name)
+                    logger.debug(f"Using provided spreadsheet to access worksheet '{sheet_name}' for user {user_id}")
+                except WorksheetNotFound:
+                    logger.error(f"Worksheet '{sheet_name}' not found in provided spreadsheet for user {user_id}")
+                    return False
+            else:
+                # Get worksheet from the active spreadsheet in the database
+                worksheet = self.get_worksheet(user_id, sheet_name)
+
             if not worksheet:
                 raise WorksheetNotFound(f"Worksheet '{sheet_name}' not found for user {user_id}.")
 
@@ -232,7 +251,10 @@ class SheetsOperations:
                 logger.error(f"Error fetching headers for sheet '{sheet_name}', user {user_id}: {head_err}")
                 raise MissingHeadersError(sheet_name, expected_headers, None) from head_err
 
-            if not actual_headers or actual_headers != expected_headers:
+            # Special case: If we're trying to add headers to an empty sheet, allow it
+            if not actual_headers and values == expected_headers:
+                logger.info(f"Adding headers to empty sheet '{sheet_name}' for user {user_id}")
+            elif not actual_headers or actual_headers != expected_headers:
                 logger.warning(
                     f"Header mismatch for user {user_id} in sheet '{sheet_name}'. "
                     f"Expected: {expected_headers}, Found: {actual_headers}. Aborting append."
@@ -241,6 +263,7 @@ class SheetsOperations:
 
             worksheet.append_row(values)
             logger.info(f"Data appended to sheet '{sheet_name}' for user {user_id} after header validation.")
+            return True
 
         except MissingHeadersError:
             raise
@@ -250,3 +273,5 @@ class SheetsOperations:
         except Exception as e:
             logger.exception(f"Unexpected error appending row to sheet '{sheet_name}' for user {user_id}: {e}")
             raise
+
+        return False  # This line should never be reached, but ensures consistent return type
