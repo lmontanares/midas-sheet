@@ -497,12 +497,10 @@ The project is configured to run in a local development environment. For a produ
 - **Implement regular database backups**
 
 Tests are run using pytest and can be initiated with:
-- `uv run test`: Runs the tests (assuming configured in `pyproject.toml`)
 - `pytest`: Runs the tests directly
 - `pytest --cov=src`: Runs the tests with coverage report
 
-It is recommended to implement static type checking with:
-- `uv run lint`: Checks static types (assuming configured in `pyproject.toml`)
+It is recommended to implement static type checking (e.g., with mypy), potentially configured via a script in `pyproject.toml`.
 
 ## 9. Instructions to Continue Development
 
