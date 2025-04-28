@@ -1,3 +1,3 @@
 """
-Tests para el proyecto de finanzas.
+Tests package for the finanzas application.
 """
