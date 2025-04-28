@@ -191,6 +191,7 @@ class OAuthManager:
     def get_credentials(self, user_id: str) -> Credentials | None:
         """
         Loads, decrypts, and refreshes credentials to ensure valid API access.
+        Always attempts to refresh the token if it's expired or close to expiring.
 
         Args:
             user_id: Unique ID of the user.
@@ -213,8 +214,18 @@ class OAuthManager:
                 scopes=token_data.get("scopes"),
             )
 
-            if credentials.expired and credentials.refresh_token:
-                logger.info(f"Token expired for user {user_id}, attempting refresh.")
+            # Check if token will expire soon (within 5 minutes) or is already expired
+            should_refresh = False
+            if credentials.expiry:
+                time_until_expiry = credentials.expiry - datetime.datetime.now(datetime.timezone.utc)
+                # If token expires within 5 minutes or is already expired
+                if time_until_expiry.total_seconds() < 300:
+                    should_refresh = True
+                    logger.info(f"Token for user {user_id} expires soon ({time_until_expiry.total_seconds()} seconds), refreshing")
+            
+            # Always refresh if expired or close to expiring and we have a refresh token
+            if (credentials.expired or should_refresh) and credentials.refresh_token:
+                logger.info(f"Token expired or expiring soon for user {user_id}, attempting refresh.")
                 try:
                     request = GoogleAuthRequest()
                     credentials.refresh(request)
@@ -228,25 +239,45 @@ class OAuthManager:
                         "scopes": credentials.scopes,
                         "expiry": credentials.expiry.isoformat() if credentials.expiry else None,
                     }
+                    
+                    # Save the refreshed token data to the database
                     self.save_token(user_id, refreshed_token_data)
+                    
+                    # Log the new expiry time
+                    if credentials.expiry:
+                        logger.info(f"New token for user {user_id} will expire at {credentials.expiry.isoformat()}")
 
                 except RefreshError as re:
+                    # Token couldn't be refreshed - likely revoked or invalid
                     logger.error(f"Failed to refresh token for user {user_id}: {re}")
+                    
+                    # Clear the token from the database to force re-auth
                     self.revoke_token(user_id, token_to_revoke=credentials.refresh_token)
                     return None
+                    
                 except Exception as e:
                     logger.error(f"Unexpected error during token refresh for user {user_id}: {e}")
                     return None
 
+            # Final validation check
             if credentials.valid:
+                # Return the valid credentials (either fresh or refreshed)
                 return credentials
             else:
                 logger.warning(f"Credentials for user {user_id} are invalid after load/refresh attempt.")
+                
+                # If we have a refresh token but credentials are still invalid,
+                # something is wrong with the token - remove it
+                if credentials.refresh_token:
+                    logger.warning(f"Removing invalid token with refresh token for user {user_id}")
+                    self.revoke_token(user_id, token_to_revoke=credentials.refresh_token)
+                    
                 return None
 
         except KeyError as ke:
             logger.error(f"Missing key in token data loaded from DB for user {user_id}: {ke}")
             return None
+            
         except Exception as e:
             logger.error(f"Error processing credentials for user {user_id}: {e}")
             return None
