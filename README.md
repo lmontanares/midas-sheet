@@ -1,4 +1,4 @@
-# Financial Management System (v3.3)
+# Financial Management System (v3.4)
 
 This project implements a personal financial management system consisting of several main components:
 
@@ -7,6 +7,7 @@ This project implements a personal financial management system consisting of sev
 3.  OAuth 2.0 authentication for secure access to the user's own spreadsheets.
 4.  **SQLite Database (v3.2)** to store encrypted tokens, selected sheets, and custom categories.
 5.  **User-specific custom category management system (v3.3)**.
+6.  **Full English Interface (v3.4)** - Note: This version is not backward compatible with previous Spanish versions. All users will need to create new spreadsheets with English headers.
 
 ## Requirements
 
@@ -129,29 +130,28 @@ The bot implements the following commands:
 -   `/auth`: Starts the OAuth authentication process
 -   `/sheet`: Selects a specific spreadsheet
 -   `/logout`: Logs out and revokes access
--   `/agregar`: Adds a new expense or income with custom categories
--   `/categorias`: Shows the user's current categories
--   `/editarcat`: Provides options to edit categories (YAML)
+-   `/add`: Adds a new expense or income with custom categories
+-   `/categories`: Shows the user's current categories
+-   `/editcat`: Provides options to edit categories (YAML)
 -   `/resetcat`: Resets the user's categories to default values
--   `/recargar`: Reloads data from the server
 
 ## Transaction Logging
 
-The transaction logging flow (`/agregar`) follows these steps:
+The transaction logging flow (`/add`) follows these steps:
 
 1.  Select transaction type (income or expense)
 2.  Select category (**from the user's custom list**)
 3.  Select subcategory for expenses (**from the custom list**)
 4.  Enter the amount
 5.  Option to add comments (Yes/No)
-6.  Log to the corresponding spreadsheet
+6.  Log to the corresponding spreadsheet tab ("expenses" or "income")
 
 ## Custom Category Management
 
 Users can customize their categories using:
 
--   **View categories**: `/categorias` command shows current categories
--   **Edit categories**: `/editarcat` command allows importing/exporting YAML files
+-   **View categories**: `/categories` command shows current categories
+-   **Edit categories**: `/editcat` command allows importing/exporting YAML files
 -   **Reset categories**: `/resetcat` command reverts to default categories
 
 ## Usage

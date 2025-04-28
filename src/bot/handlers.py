@@ -17,12 +17,12 @@ from src.sheets.operations import MissingHeadersError, SheetsOperations
 from ..db.database import SessionLocal
 
 
-def get_category_keyboard(expense_type: str = "gasto", user_id: str = None) -> InlineKeyboardMarkup:
+def get_category_keyboard(expense_type: str = "expense", user_id: str = None) -> InlineKeyboardMarkup:
     """
     Creates a button keyboard with categories based on transaction type and user preferences.
 
     Args:
-        expense_type: Transaction type (gasto or ingreso)
+        expense_type: Transaction type (expense or income)
         user_id: User's ID for personalized categories
 
     Returns:
@@ -30,7 +30,7 @@ def get_category_keyboard(expense_type: str = "gasto", user_id: str = None) -> I
     """
     buttons = []
 
-    if expense_type == "gasto":
+    if expense_type == "expense":
         for category in category_manager.get_expense_category_names(user_id):
             # Callback data format: "category|expense_type|category_name"
             callback_data = f"category|{expense_type}|{category}"
@@ -42,7 +42,7 @@ def get_category_keyboard(expense_type: str = "gasto", user_id: str = None) -> I
             buttons.append([InlineKeyboardButton(category, callback_data=callback_data)])
 
     # Add button to return to type selector
-    back_button = [InlineKeyboardButton("⬅️ Cambiar tipo", callback_data="back_to_selector")]
+    back_button = [InlineKeyboardButton("⬅️ Change type", callback_data="back_to_selector")]
     buttons.append(back_button)
 
     return InlineKeyboardMarkup(buttons)
@@ -54,7 +54,7 @@ def get_subcategory_keyboard(main_category: str, expense_type: str, user_id: str
 
     Args:
         main_category: Selected main category name
-        expense_type: Transaction type (gasto or ingreso)
+        expense_type: Transaction type (expense or income)
         user_id: User's ID for personalized categories
 
     Returns:
@@ -68,7 +68,7 @@ def get_subcategory_keyboard(main_category: str, expense_type: str, user_id: str
             callback_data = f"subcategory|{expense_type}|{main_category}|{subcat}"
             buttons.append([InlineKeyboardButton(subcat, callback_data=callback_data)])
 
-    back_button = [InlineKeyboardButton("⬅️ Volver a Categorías", callback_data=f"back|{expense_type}")]
+    back_button = [InlineKeyboardButton("⬅️ Back to Categories", callback_data=f"back|{expense_type}")]
     buttons.append(back_button)
 
     return InlineKeyboardMarkup(buttons)
@@ -84,9 +84,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """
     user = update.effective_user
     await update.message.reply_text(
-        f"¡Hola {user.first_name}! Soy el bot de gestión financiera.\n\n"
-        f"Para comenzar, necesitas autorizar el acceso a tus hojas de cálculo de Google.\n"
-        f"Usa el comando /auth para iniciar el proceso de autorización."
+        f"Hello {user.first_name}! I'm the financial management bot.\n\n"
+        f"To get started, you need to authorize access to your Google Sheets.\n"
+        f"Use the /auth command to start the authorization process."
     )
 
 
@@ -99,22 +99,22 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         context: Handler context
     """
     help_text = """
-    *Comandos disponibles:*
-    /start - Inicia el bot
-    /help - Muestra este mensaje de ayuda
-    /auth - Autoriza acceso a tus hojas de Google
+    *Available Commands:*
+    /start - Start the bot
+    /help - Show this help message
+    /auth - Authorize access to your Google Sheets
 
-    /sheet <ID> - Selecciona una hoja de cálculo específica
-    /agregar - Muestra las categorías disponibles para registrar una transacción
-    /logout - Cierra sesión y revoca acceso
+    /sheet <ID> - Select a specific spreadsheet
+    /add - Show available categories to record a transaction
+    /logout - Log out and revoke access
 
-    *Gestión de categorías (personalizadas por usuario):*
-    /categorias - Muestra tus categorías actuales
-    /editarcat - Edita tus categorías personalizadas. Pasos:
-        1. Usa la opción 'Exportar a YAML' para obtener tu archivo actual.
-        2. Edita el archivo `.yaml` descargado (añade/modifica/elimina categorías/subcategorías).
-        3. Usa la opción 'Importar desde YAML' y envía el archivo modificado.
-    /resetcat - Reinicia tus categorías a los valores predeterminados del sistema
+    *Category Management (customized per user):*
+    /categories - Show your current categories
+    /editcat - Edit your custom categories. Steps:
+        1. Use the 'Export to YAML' option to get your current file.
+        2. Edit the downloaded `.yaml` file (add/modify/delete categories/subcategories).
+        3. Use the 'Import from YAML' option and send the modified file.
+    /resetcat - Reset your categories to system default values
     """
     await update.message.reply_text(help_text, parse_mode="Markdown")
 
@@ -126,13 +126,13 @@ def get_type_selector_keyboard() -> InlineKeyboardMarkup:
     Returns:
         Telegram button keyboard
     """
-    buttons = [[InlineKeyboardButton("GASTOS", callback_data="selector|gasto"), InlineKeyboardButton("INGRESOS", callback_data="selector|ingreso")]]
+    buttons = [[InlineKeyboardButton("EXPENSES", callback_data="selector|expense"), InlineKeyboardButton("INCOME", callback_data="selector|income")]]
     return InlineKeyboardMarkup(buttons)
 
 
 async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Handles /agregar command to start transaction recording process.
+    Handles /add command to start transaction recording process.
     Shows buttons to choose between expense or income.
 
     Args:
@@ -146,17 +146,17 @@ async def add_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     if not oauth_manager or not oauth_manager.is_authenticated(user_id):
         await update.message.reply_text(
-            "⚠️ Debes autenticarte primero antes de registrar transacciones.\n\nUsa /auth para iniciar el proceso de autorización."
+            "⚠️ You need to authenticate first before recording transactions.\n\nUse /auth to start the authorization process."
         )
         return
 
     try:
         keyboard = get_type_selector_keyboard()
-        await update.message.reply_text("¿Qué tipo de transacción deseas registrar?", reply_markup=keyboard)
+        await update.message.reply_text("What type of transaction would you like to record?", reply_markup=keyboard)
 
     except Exception as e:
-        logger.error(f"Error al mostrar el selector de tipo: {e}")
-        await update.message.reply_text("❌ Error al iniciar el proceso de registro")
+        logger.error(f"Error displaying type selector: {e}")
+        await update.message.reply_text("❌ Error starting the registration process")
 
 
 async def register_transaction(
@@ -168,7 +168,7 @@ async def register_transaction(
     Args:
         update: Telegram Update object
         context: Handler context
-        expense_type: Transaction type (gasto or ingreso)
+        expense_type: Transaction type (expense or income)
         amount: Transaction amount
         category: Main category of the transaction
         subcategory: Subcategory of the transaction
@@ -178,8 +178,8 @@ async def register_transaction(
     user = update.effective_user
     user_id = str(user.id)
     sheets_ops: SheetsOperations = context.bot_data.get("sheets_operations")
-    if expense_type == "gasto":
-        sheet_name = "gastos"
+    if expense_type == "expense":
+        sheet_name = "expenses"
         row_data = [
             date,
             user.username or user.first_name,
@@ -189,8 +189,8 @@ async def register_transaction(
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             comment,
         ]
-    elif expense_type == "ingreso":
-        sheet_name = "ingresos"
+    elif expense_type == "income":
+        sheet_name = "income"
         row_data = [
             date,
             user.username or user.first_name,
@@ -202,13 +202,13 @@ async def register_transaction(
 
     try:
         sheets_ops.append_row(user_id, sheet_name, row_data)
-        sign = "-" if expense_type == "gasto" else "+"
+        sign = "-" if expense_type == "expense" else "+"
 
         # For income, where category and subcategory are the same, only show once
         category_display = f"{category}" if category == subcategory else f"{category} - {subcategory}"
 
         confirm_message = (
-            f"✅ {expense_type.capitalize()} registrado correctamente:\nFecha: {date}\nCategoría: {category_display}\nMonto: {sign}{amount:.2f}"
+            f"✅ {expense_type.capitalize()} recorded successfully:\nDate: {date}\nCategory: {category_display}\nAmount: {sign}{amount:.2f}"
         )
 
         if comment:
@@ -219,31 +219,31 @@ async def register_transaction(
     except MissingHeadersError as e:
         logger.error(f"Header mismatch error for user {user_id}: {e}")
         await update.effective_message.reply_text(
-            f"❌ Error: Las cabeceras de la hoja '{e.sheet_name}' no son correctas.\n"
-            f"Esperadas: `{e.expected}`\n"
-            f"Encontradas: `{e.actual}`\n\n"
-            "Por favor, corrige las cabeceras en tu Google Sheet o asegúrate de que la hoja exista y tenga datos.",
+            f"❌ Error: The headers in the sheet '{e.sheet_name}' are not correct.\n"
+            f"Expected: `{e.expected}`\n"
+            f"Found: `{e.actual}`\n\n"
+            "Please correct the headers in your Google Sheet or make sure the sheet exists and has data.",
             parse_mode=ParseMode.MARKDOWN,
         )
     except WorksheetNotFound:
         logger.error(f"Worksheet '{sheet_name}' not found for user {user_id} during append.")
         await update.effective_message.reply_text(
-            f"❌ Error: No se encontró la hoja '{sheet_name}' en tu Google Sheet activo. "
-            "Asegúrate de que exista o selecciona la hoja correcta con /sheet."
+            f"❌ Error: The worksheet '{sheet_name}' was not found in your active Google Sheet. "
+            "Make sure it exists or select the correct sheet with /sheet."
         )
     except APIError as e:
         logger.error(f"Google Sheets API error during append for user {user_id}: {e}")
         await update.effective_message.reply_text(
-            "❌ Error de API al intentar registrar la transacción en Google Sheets. Verifica tu conexión o los permisos de la hoja."
+            "❌ API error when trying to record the transaction in Google Sheets. Check your connection or sheet permissions."
         )
     except RuntimeError as e:
         logger.error(f"Runtime/Auth error during append for user {user_id}: {e}")
-        await update.effective_message.reply_text("❌ Error de autenticación al registrar. Intenta usar /auth de nuevo.")
+        await update.effective_message.reply_text("❌ Authentication error when recording. Try using /auth again.")
     except ValueError as e:
         logger.error(f"Configuration error adding transaction for user {user_id}: {e}")
-        await update.effective_message.reply_text(f"❌ Error de configuración: {str(e)}")
+        await update.effective_message.reply_text(f"❌ Configuration error: {str(e)}")
     except Exception as e:
-        await update.effective_message.reply_text("❌ Error inesperado al registrar la transacción en la hoja.")
+        await update.effective_message.reply_text("❌ Unexpected error while recording the transaction in the sheet.")
         logger.exception(f"Unhandled error adding transaction for user {user_id}: {e}")
 
 
@@ -275,7 +275,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if action == "selector":
         # Verify authentication and active sheet for transaction flows
         if not oauth_manager or not oauth_manager.is_authenticated(user_id):
-            await query.edit_message_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
+            await query.edit_message_text("⚠️ You need to authenticate first.\n\nUse /auth to start the authorization process.")
             return
 
         expense_type = data[1]
@@ -292,7 +292,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
             # Update message with new category keyboard based on selected type and user preferences
             keyboard = get_category_keyboard(expense_type, user_id)
-            await query.edit_message_text(f"Selecciona una categoría para registrar un {expense_type}:", reply_markup=keyboard)
+            await query.edit_message_text(f"Select a category to record an {expense_type}:", reply_markup=keyboard)
         except Exception as e:
             error_str = str(e)
             if "message is not modified" in error_str.lower():
@@ -301,7 +301,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 logger.warning(f"Attempt to edit message with identical content: {error_str}")
             else:
                 logger.error(f"Error getting categories for buttons: {e}")
-                await query.edit_message_text("❌ Error al cargar las categorías")
+                await query.edit_message_text("❌ Error loading categories")
 
         return
 
@@ -311,7 +311,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         category = data[2]
 
         # Different behavior for expenses and income
-        if expense_type == "gasto":
+        if expense_type == "expense":
             try:
                 # Load user's custom categories
                 db = SessionLocal()
@@ -325,13 +325,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 # Create keyboard with subcategories based on user preferences
                 keyboard = get_subcategory_keyboard(category, expense_type, user_id)
                 await query.edit_message_text(
-                    f"Has seleccionado *{category}* como {expense_type}.\nAhora selecciona una subcategoría:",
+                    f"You selected *{category}* as {expense_type}.\nNow select a subcategory:",
                     reply_markup=keyboard,
                     parse_mode="Markdown",
                 )
             except Exception as e:
                 logger.error(f"Error getting subcategories: {e}")
-                await query.edit_message_text("❌ Error al cargar las subcategorías")
+                await query.edit_message_text("❌ Error loading subcategories")
         else:
             # For income, no subcategories, proceed directly to request amount
             # Save data in user_data for next step
@@ -347,7 +347,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             context.user_data["state"] = "waiting_amount"
 
             await query.edit_message_text(
-                f"Has seleccionado *{category}* como {expense_type}.\nPor favor envía el monto (solo números, ej: 123.45):", parse_mode="Markdown"
+                f"You selected *{category}* as {expense_type}.\nPlease enter the amount (numbers only, e.g.: 123.45):", parse_mode="Markdown"
             )
 
         return
@@ -368,10 +368,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
             # Show main categories again with user preferences
             keyboard = get_category_keyboard(expense_type, user_id)
-            await query.edit_message_text(f"Selecciona una categoría para registrar un {expense_type}:", reply_markup=keyboard)
+            await query.edit_message_text(f"Select a category to record an {expense_type}:", reply_markup=keyboard)
         except Exception as e:
             logger.error(f"Error going back to categories: {e}")
-            await query.edit_message_text("❌ Error al cargar las categorías")
+            await query.edit_message_text("❌ Error loading categories")
 
         return
 
@@ -397,7 +397,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         category_display = f"{category}" if category == subcategory else f"{category} - {subcategory}"
 
         await query.edit_message_text(
-            f"Has seleccionado *{category_display}* como {expense_type}.\nPor favor envía el monto (solo números, ej: 123.45):",
+            f"You selected *{category_display}* as {expense_type}.\nPlease enter the amount (numbers only, e.g.: 123.45):",
             parse_mode="Markdown",
         )
 
@@ -408,10 +408,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         try:
             # Show type selector again
             keyboard = get_type_selector_keyboard()
-            await query.edit_message_text("¿Qué tipo de transacción deseas registrar?", reply_markup=keyboard)
+            await query.edit_message_text("What type of transaction would you like to record?", reply_markup=keyboard)
         except Exception as e:
             logger.error(f"Error going back to type selector: {e}")
-            await query.edit_message_text("❌ Error al cargar el selector de tipo")
+            await query.edit_message_text("❌ Error loading type selector")
 
         return
 
@@ -422,7 +422,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Verify there's a pending transaction
         if "pending_transaction" not in context.user_data:
             logger.warning(f"Attempted to add comment but no pending transaction. User: {update.effective_user.id}")
-            await query.edit_message_text("❌ Error: La transacción ha expirado. Por favor usa /agregar para iniciar una nueva transacción.")
+            await query.edit_message_text("❌ Error: The transaction has expired. Please use /add to start a new transaction.")
             return
 
         logger.info(f"Handling comment button. Option: {option}. User: {update.effective_user.id}")
@@ -436,14 +436,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             amount = transaction["amount"]
 
             # Show category (with subcategory if expense)
-            if expense_type == "ingreso":
+            if expense_type == "income":
                 category_display = category
             else:
                 subcategory = transaction["subcategory"]
                 category_display = f"{category} - {subcategory}"
 
             await query.edit_message_text(
-                f"*{category_display}* - *{amount:.2f}*\n\nPor favor escribe un comentario para esta transacción:", parse_mode="Markdown"
+                f"*{category_display}* - *{amount:.2f}*\n\nPlease write a comment for this transaction:", parse_mode="Markdown"
             )
         else:
             # User doesn't want to add comment, record transaction without comment
@@ -474,16 +474,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             try:
                 success = category_manager.reset_user_categories(user_id, db)
                 if success:
-                    await query.edit_message_text("✅ Tus categorías han sido restablecidas a los valores predeterminados.")
+                    await query.edit_message_text("✅ Your categories have been reset to default values.")
                 else:
-                    await query.edit_message_text("❌ Error al restablecer tus categorías.")
+                    await query.edit_message_text("❌ Error resetting your categories.")
             except Exception as e:
                 logger.error(f"Error resetting categories for user {user_id}: {e}")
-                await query.edit_message_text("❌ Error al restablecer las categorías.")
+                await query.edit_message_text("❌ Error resetting categories.")
             finally:
                 db.close()
         else:  # option == "cancel"
-            await query.edit_message_text("⚠️ Operación cancelada. Tus categorías no han sido modificadas.")
+            await query.edit_message_text("⚠️ Operation cancelled. Your categories have not been modified.")
         return
 
     # Handle edit categories options
@@ -493,17 +493,17 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if option == "import":
             # Prompt user to upload YAML file
             await query.edit_message_text(
-                "📝 Por favor, envía un archivo YAML con tus categorías personalizadas.\n\n"
-                "El archivo debe tener el siguiente formato:\n```\n"
+                "📝 Please send a YAML file with your custom categories.\n\n"
+                "The file must have the following format:\n```\n"
                 "expense_categories:\n"
-                "  CATEGORIA1:\n"
-                "    - Subcategoria1\n"
-                "    - Subcategoria2\n"
-                "  CATEGORIA2:\n"
-                "    - Subcategoria3\n"
+                "  CATEGORY1:\n"
+                "    - Subcategory1\n"
+                "    - Subcategory2\n"
+                "  CATEGORY2:\n"
+                "    - Subcategory3\n"
                 "income_categories:\n"
-                "  - Ingreso1\n"
-                "  - Ingreso2\n```"
+                "  - Income1\n"
+                "  - Income2\n```"
             )
             # Set state to waiting for file upload
             context.user_data["state"] = "waiting_category_file"
@@ -511,20 +511,20 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         elif option == "export":
             # Export categories to YAML
-            await query.edit_message_text("📦 Exportando tus categorías...")
+            await query.edit_message_text("📦 Exporting your categories...")
             await export_categories_to_yaml(update, context)
             return
 
         elif option == "expense" or option == "income":
             # Show message about editing not yet implemented
             await query.edit_message_text(
-                f"La edición manual de categorías de {option} está en desarrollo.\n\n"
-                "Por ahora, puedes usar las opciones de importar/exportar para modificar tus categorías mediante un archivo YAML."
+                f"Manual editing of {option} categories is in development.\n\n"
+                "For now, you can use the import/export options to modify your categories using a YAML file."
             )
             return
 
     # If it gets here, it's an unknown command
-    await query.edit_message_text("❌ Acción no reconocida. Usa /agregar para comenzar de nuevo.")
+    await query.edit_message_text("❌ Unrecognized action. Use /add to start again.")
 
 
 async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -549,10 +549,10 @@ async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         try:
             amount = float(amount_text)
             if amount <= 0:
-                await update.message.reply_text("⚠️ El monto debe ser un número positivo. Intenta de nuevo:")
+                await update.message.reply_text("⚠️ The amount must be a positive number. Try again:")
                 return
         except ValueError:
-            await update.message.reply_text("⚠️ Por favor ingresa solo números (ej: 123.45). Intenta de nuevo:")
+            await update.message.reply_text("⚠️ Please enter only numbers (e.g.: 123.45). Try again:")
             return
 
         # Save amount in pending transaction
@@ -567,18 +567,18 @@ async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         category = transaction["category"]
 
         # For income, where category and subcategory are the same, adjust message
-        if expense_type == "ingreso":
+        if expense_type == "income":
             category_display = category
         else:
             subcategory = transaction["subcategory"]
             category_display = f"{category} - {subcategory}"
 
         # Create buttons to confirm if user wants to add a comment
-        keyboard = [[InlineKeyboardButton("✅ Sí", callback_data="comment|yes"), InlineKeyboardButton("❌ No", callback_data="comment|no")]]
+        keyboard = [[InlineKeyboardButton("✅ Yes", callback_data="comment|yes"), InlineKeyboardButton("❌ No", callback_data="comment|no")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await update.message.reply_text(
-            f"Has seleccionado *{category_display}* como {expense_type} con monto *{amount:.2f}*.\n\n¿Deseas agregar un comentario a esta transacción?",
+            f"You selected *{category_display}* as {expense_type} with amount *{amount:.2f}*.\n\nWould you like to add a comment to this transaction?",
             reply_markup=reply_markup,
             parse_mode="Markdown",
         )
@@ -586,7 +586,7 @@ async def amount_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as e:
         # If any error occurs, inform user and log it
         logger.error(f"Error processing amount: {e}")
-        await update.message.reply_text("❌ Error al procesar la transacción. Por favor intenta de nuevo con /agregar.")
+        await update.message.reply_text("❌ Error processing the transaction. Please try again with /add.")
 
 
 async def comment_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -631,7 +631,7 @@ async def comment_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     except Exception as e:
         # If any error occurs, inform user and log it
         logger.error(f"Error processing comment: {e}")
-        await update.message.reply_text("❌ Error al procesar la transacción. Por favor intenta de nuevo con /agregar.")
+        await update.message.reply_text("❌ Error processing the transaction. Please try again with /add.")
 
 
 async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -654,7 +654,7 @@ async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def show_categories_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Muestra las categorías del usuario.
+    Shows user's categories.
 
     Args:
         update: Telegram Update object
@@ -666,7 +666,7 @@ async def show_categories_command(update: Update, context: ContextTypes.DEFAULT_
     # Verify authentication
     oauth_manager = context.bot_data.get("oauth_manager")
     if not oauth_manager or not oauth_manager.is_authenticated(user_id):
-        await update.message.reply_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
+        await update.message.reply_text("⚠️ You need to authenticate first.\n\nUse /auth to start the authorization process.")
         return
 
     # Get user categories
@@ -677,30 +677,30 @@ async def show_categories_command(update: Update, context: ContextTypes.DEFAULT_
         expense_categories = category_manager.get_expense_categories(user_id)
         income_categories = category_manager.get_income_categories(user_id)
 
-        message = "*Tus categorías personalizadas:*\n\n"
-        message += "*CATEGORÍAS DE GASTOS:*\n"
+        message = "*Your custom categories:*\n\n"
+        message += "*EXPENSE CATEGORIES:*\n"
         for category, subcategories in expense_categories.items():
             message += f"• {category}\n"
             for subcategory in subcategories:
                 message += f"  - {subcategory}\n"
 
-        message += "\n*CATEGORÍAS DE INGRESOS:*\n"
+        message += "\n*INCOME CATEGORIES:*\n"
         for category in income_categories:
             message += f"• {category}\n"
 
-        message += "\nPuedes personalizar tus categorías con el comando /editarcat"
+        message += "\nYou can customize your categories with the /editcat command"
         await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
 
     except Exception as e:
         logger.error(f"Error showing categories for user {user_id}: {e}")
-        await update.message.reply_text("❌ Error al obtener tus categorías.")
+        await update.message.reply_text("❌ Error retrieving your categories.")
     finally:
         db.close()
 
 
 async def reset_categories_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Resetea las categorías del usuario a los valores predeterminados.
+    Resets user's categories to default values.
 
     Args:
         update: Telegram Update object
@@ -712,27 +712,27 @@ async def reset_categories_command(update: Update, context: ContextTypes.DEFAULT
     # Verify authentication
     oauth_manager = context.bot_data.get("oauth_manager")
     if not oauth_manager or not oauth_manager.is_authenticated(user_id):
-        await update.message.reply_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
+        await update.message.reply_text("⚠️ You need to authenticate first.\n\nUse /auth to start the authorization process.")
         return
 
     # Create confirmation buttons
     keyboard = InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("✅ Sí, resetear", callback_data="reset_categories|confirm"),
-                InlineKeyboardButton("❌ No, cancelar", callback_data="reset_categories|cancel"),
+                InlineKeyboardButton("✅ Yes, reset", callback_data="reset_categories|confirm"),
+                InlineKeyboardButton("❌ No, cancel", callback_data="reset_categories|cancel"),
             ]
         ]
     )
 
     await update.message.reply_text(
-        "⚠️ ¿Estás seguro que deseas resetear tus categorías personalizadas a los valores predeterminados?", reply_markup=keyboard
+        "⚠️ Are you sure you want to reset your custom categories to default values?", reply_markup=keyboard
     )
 
 
 async def edit_categories_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Inicia el flujo de edición de categorías.
+    Starts the category editing flow.
 
     Args:
         update: Telegram Update object
@@ -744,25 +744,25 @@ async def edit_categories_command(update: Update, context: ContextTypes.DEFAULT_
     # Verify authentication
     oauth_manager = context.bot_data.get("oauth_manager")
     if not oauth_manager or not oauth_manager.is_authenticated(user_id):
-        await update.message.reply_text("⚠️ Debes autenticarte primero.\n\nUsa /auth para iniciar el proceso de autorización.")
+        await update.message.reply_text("⚠️ You need to authenticate first.\n\nUse /auth to start the authorization process.")
         return
 
     # Show editing options
     keyboard = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("✏️ Editar categorías de gastos", callback_data="edit_categories|expense")],
-            [InlineKeyboardButton("✏️ Editar categorías de ingresos", callback_data="edit_categories|income")],
-            [InlineKeyboardButton("📝 Importar desde YAML", callback_data="edit_categories|import")],
-            [InlineKeyboardButton("📦 Exportar a YAML", callback_data="edit_categories|export")],
+            [InlineKeyboardButton("✏️ Edit expense categories", callback_data="edit_categories|expense")],
+            [InlineKeyboardButton("✏️ Edit income categories", callback_data="edit_categories|income")],
+            [InlineKeyboardButton("📝 Import from YAML", callback_data="edit_categories|import")],
+            [InlineKeyboardButton("📦 Export to YAML", callback_data="edit_categories|export")],
         ]
     )
 
-    await update.message.reply_text("¿Qué deseas hacer con tus categorías?", reply_markup=keyboard)
+    await update.message.reply_text("What would you like to do with your categories?", reply_markup=keyboard)
 
 
 async def process_yaml_import(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Procesa un archivo YAML para importar categorías.
+    Processes a YAML file to import categories.
 
     Args:
         update: Telegram Update object
@@ -773,13 +773,13 @@ async def process_yaml_import(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Check if there is an attached document
     if not update.message.document:
-        await update.message.reply_text("❌ Por favor, adjunta un archivo YAML con tus categorías.")
+        await update.message.reply_text("❌ Please attach a YAML file with your categories.")
         return
 
     # Verify it is a YAML file
     file = update.message.document
     if not file.file_name.endswith((".yaml", ".yml")):
-        await update.message.reply_text("❌ El archivo debe tener extensión .yaml o .yml")
+        await update.message.reply_text("❌ The file must have a .yaml or .yml extension")
         return
 
     try:
@@ -791,23 +791,23 @@ async def process_yaml_import(update: Update, context: ContextTypes.DEFAULT_TYPE
         categories_data = yaml.safe_load(yaml_text)
 
         if not isinstance(categories_data, dict):
-            await update.message.reply_text("❌ Formato incorrecto. El archivo debe contener un diccionario YAML.")
+            await update.message.reply_text("❌ Incorrect format. The file must contain a YAML dictionary.")
             return
 
         if "expense_categories" not in categories_data or "income_categories" not in categories_data:
-            await update.message.reply_text("❌ Formato incorrecto. El archivo debe contener 'expense_categories' y 'income_categories'.")
+            await update.message.reply_text("❌ Incorrect format. The file must contain 'expense_categories' and 'income_categories'.")
             return
 
         expense_categories = categories_data["expense_categories"]
         income_categories = categories_data["income_categories"]
 
         if not isinstance(expense_categories, dict) or not isinstance(income_categories, list):
-            await update.message.reply_text("❌ Formato incorrecto. 'expense_categories' debe ser un diccionario y 'income_categories' una lista.")
+            await update.message.reply_text("❌ Incorrect format. 'expense_categories' must be a dictionary and 'income_categories' a list.")
             return
 
         for category, subcategories in expense_categories.items():
             if not isinstance(subcategories, list):
-                await update.message.reply_text(f"❌ Formato incorrecto. Las subcategorías de '{category}' deben ser una lista.")
+                await update.message.reply_text(f"❌ Incorrect format. Subcategories for '{category}' must be a list.")
                 return
 
         db = SessionLocal()
@@ -815,25 +815,25 @@ async def process_yaml_import(update: Update, context: ContextTypes.DEFAULT_TYPE
             success = category_manager.save_user_categories(user_id, expense_categories, income_categories, db)
 
             if success:
-                await update.message.reply_text("✅ Categorías importadas correctamente.")
+                await update.message.reply_text("✅ Categories imported successfully.")
             else:
-                await update.message.reply_text("❌ Error al guardar las categorías.")
+                await update.message.reply_text("❌ Error saving categories.")
 
         finally:
             db.close()
 
     except yaml.YAMLError as e:
-        await update.message.reply_text(f"❌ Error al parsear el archivo YAML: {str(e)}")
+        await update.message.reply_text(f"❌ Error parsing YAML file: {str(e)}")
         context.user_data.pop("state", None)  # Clear state on error
     except Exception as e:
         logger.error(f"Error importing YAML categories for user {user_id}: {e}")
-        await update.message.reply_text("❌ Error al procesar el archivo de categorías.")
+        await update.message.reply_text("❌ Error processing the categories file.")
         context.user_data.pop("state", None)  # Clear state on error
 
 
 async def export_categories_to_yaml(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Exporta las categorías del usuario a un archivo YAML.
+    Exports user's categories to a YAML file.
 
     Args:
         update: Telegram Update object
@@ -863,8 +863,8 @@ async def export_categories_to_yaml(update: Update, context: ContextTypes.DEFAUL
             await context.bot.send_document(
                 chat_id=update.effective_chat.id,
                 document=file,
-                filename=f"categorias_{user.username or user_id}.yaml",
-                caption="📦 Tus categorías personalizadas",
+                filename=f"categories_{user.username or user_id}.yaml",
+                caption="📦 Your custom categories",
             )
 
         import os
@@ -874,9 +874,9 @@ async def export_categories_to_yaml(update: Update, context: ContextTypes.DEFAUL
     except Exception as e:
         logger.error(f"Error exporting YAML categories for user {user_id}: {e}")
         if update.callback_query:
-            await update.callback_query.edit_message_text("❌ Error al exportar tus categorías.")
+            await update.callback_query.edit_message_text("❌ Error exporting your categories.")
         elif update.effective_message:
-            await update.effective_message.reply_text("❌ Error al exportar tus categorías.")
+            await update.effective_message.reply_text("❌ Error exporting your categories.")
     finally:
         db.close()
 
@@ -892,4 +892,4 @@ async def error_handler(update: Update | None, context: ContextTypes.DEFAULT_TYP
     logger.exception(f"Error: {context.error} - Update: {update}")
 
     if update and update.effective_message:
-        await update.effective_message.reply_text("Ha ocurrido un error. Por favor intenta de nuevo más tarde.")
+        await update.effective_message.reply_text("An error has occurred. Please try again later.")

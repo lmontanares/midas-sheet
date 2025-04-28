@@ -34,8 +34,8 @@ class SheetsOperations:
 
     # Define expected headers as a class attribute
     REQUIRED_SHEETS = {
-        "gastos": ["Fecha", "Usuario", "Categoría", "Subcategoría", "Monto", "Timestamp", "Comentario"],
-        "ingresos": ["Fecha", "Usuario", "Categoría", "Monto", "Timestamp", "Comentario"],
+        "expenses": ["Date", "User", "Category", "Subcategory", "Amount", "Timestamp", "Comment"],
+        "income": ["Date", "User", "Category", "Amount", "Timestamp", "Comment"],
     }
 
     def __init__(self, client: GoogleSheetsClient) -> None:

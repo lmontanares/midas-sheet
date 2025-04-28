@@ -13,13 +13,13 @@ def get_commands() -> list[BotCommand]:
         List of bot commands
     """
     return [
-        BotCommand("start", "Inicia el bot"),
-        BotCommand("help", "Muestra ayuda sobre los comandos disponibles"),
-        BotCommand("auth", "Autoriza acceso a tus hojas de Google"),
-        BotCommand("sheet", "Selecciona una hoja de cálculo específica"),
-        BotCommand("agregar", "Agrega una transacción financiera"),
-        BotCommand("logout", "Cierra sesión y revoca acceso"),
-        BotCommand("categorias", "Muestra tus categorías actuales"),
-        BotCommand("editarcat", "Edita tus categorías personalizadas"),
-        BotCommand("resetcat", "Reinicia tus categorías a los valores predeterminados"),
+        BotCommand("start", "Start the bot"),
+        BotCommand("help", "Show help for available commands"),
+        BotCommand("auth", "Authorize access to your Google Sheets"),
+        BotCommand("sheet", "Select a specific spreadsheet"),
+        BotCommand("add", "Add a financial transaction"),
+        BotCommand("logout", "Log out and revoke access"),
+        BotCommand("categories", "Show your current categories"),
+        BotCommand("editcat", "Edit your custom categories"),
+        BotCommand("resetcat", "Reset your categories to default values"),
     ]

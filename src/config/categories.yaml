@@ -1,72 +1,72 @@
 ---
-# Configuración de categorías para el sistema de gestión financiera
+# Category configuration for the financial management system
 
-# Categorías de gastos con estructura jerárquica (categorías y subcategorías)
+# Expense categories with hierarchical structure (categories and subcategories)
 expense_categories:
-  HOGAR:
-    - Supermercado
-    - Hipoteca / Alquiler
-    - Electricidad
-    - Gas / Calefacción
-    - Agua / Alcantarillado / Basura
-    - Teléfono
-    - Cable / Satélite
+  HOME:
+    - Supermarket
+    - Mortgage / Rent
+    - Electricity
+    - Gas / Heating
+    - Water / Sewage / Garbage
+    - Phone
+    - Cable / Satellite
     - Internet
-    - Mobiliario / Electrodomésticos
-    - Jardín / Patio
-    - Mantenimiento / Mejoras
-    - Otros
+    - Furniture / Appliances
+    - Garden / Patio
+    - Maintenance / Improvements
+    - Other
 
-  TRANSPORTE:
+  TRANSPORTATION:
     - Uber
-    - Pagos del Automóvil
-    - Seguro de Auto
-    - Combustible
-    - Transporte Público
-    - Reparaciones / Mantenimiento
-    - Registro / Licencia
+    - Car Payments
+    - Car Insurance
+    - Fuel
+    - Public Transport
+    - Repairs / Maintenance
+    - Registration / License
 
-  VIDA-DIARIA:
-    - Comestibles
-    - Comer Fuera
-    - Ropa
-    - Limpieza
-    - Salón / Barbería
-    - Artículos para Mascotas
+  DAILY-LIFE:
+    - Groceries
+    - Eating Out
+    - Clothing
+    - Cleaning
+    - Salon / Barbershop
+    - Pet Supplies
 
-  ENTRETENIMIENTO:
+  ENTERTAINMENT:
     - Games
-    - Conciertos / Teatro
-    - Deportes
-    - Recreación al Aire Libre
+    - Concerts / Theater
+    - Sports
+    - Outdoor Recreation
 
-  SALUD:
-    - Seguro de Salud
-    - Examenes
-    - Visitas Médicas / Dentista
-    - Medicamentos / Recetas
-    - Veterinario
-    - Seguro de Vida
+  HEALTH:
+    - Health Insurance
+    - Exams
+    - Medical / Dental Visits
+    - Medications / Prescriptions
+    - Veterinary
+    - Life Insurance
 
-  VACACIONES-FESTIVOS:
-    - Pasajes Aéreos
-    - Alojamiento
-    - Comida
-    - Recuerdos
-    - Hospedaje de Mascotas
-    - Alquiler de Automóvil
+  HOLIDAYS-VACATIONS:
+    - Airfare
+    - Accommodation
+    - Food
+    - Souvenirs
+    - Pet Boarding
+    - Car Rental
 
-  FUTURO:
-    - Ahorros
-    - Inversiones
-    - Vivienda Propia
+  FUTURE:
+    - Savings
+    - Investments
+    - Home Ownership
 
-# Categorías de ingresos (sin subcategorías)
+# Income categories (no subcategories)
 income_categories:
-  - Salario / Sueldos
-  - Ingresos por Intereses
-  - Dividendos
-  - Reembolsos / Devoluciones
-  - Negocio
-  - Pensión
-  - Varios
+  - Salary / Wages
+  - Interest Income
+  - Dividends
+  - Refunds / Returns
+  - Business
+  - Pension
+  - Miscellaneous

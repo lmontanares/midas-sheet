@@ -67,7 +67,7 @@ class TelegramBot:
         # Register basic command handlers
         self.application.add_handler(CommandHandler("start", start_command))
         self.application.add_handler(CommandHandler("help", help_command))
-        self.application.add_handler(CommandHandler("agregar", add_command))
+        self.application.add_handler(CommandHandler("add", add_command))
 
         # Register OAuth handlers
         self.application.add_handler(CommandHandler("auth", auth_command))
@@ -76,8 +76,8 @@ class TelegramBot:
         self.application.add_handler(CommandHandler("logout", logout_command))
 
         # Register category management handlers
-        self.application.add_handler(CommandHandler("categorias", show_categories_command))
-        self.application.add_handler(CommandHandler("editarcat", edit_categories_command))
+        self.application.add_handler(CommandHandler("categories", show_categories_command))
+        self.application.add_handler(CommandHandler("editcat", edit_categories_command))
         self.application.add_handler(CommandHandler("resetcat", reset_categories_command))
 
         # Button callback handler

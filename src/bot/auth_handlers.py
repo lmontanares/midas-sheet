@@ -149,13 +149,13 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         # Send link to user
         await update.message.reply_text(
-            f"🔐 *Autorización Requerida*\n\n"
-            f"Para conectar tu cuenta de Google Sheets, por favor sigue estos pasos:\n\n"
-            f"1. Haz clic en el enlace de abajo.\n"
-            f"2. Autoriza el acceso en la página de Google.\n"
-            f"3. Serás redirigido a una página de confirmación.\n\n"
-            f"[Autorizar Acceso a Google Sheets]({auth_url})\n\n"
-            f"_Este enlace es único y válido por un corto tiempo._",
+            f"🔐 *Authorization Required*\n\n"
+            f"To connect your Google Sheets account, please follow these steps:\n\n"
+            f"1. Click on the link below.\n"
+            f"2. Authorize access on the Google page.\n"
+            f"3. You will be redirected to a confirmation page.\n\n"
+            f"[Authorize Access to Google Sheets]({auth_url})\n\n"
+            f"_This link is unique and valid for a short time._",
             parse_mode=ParseMode.MARKDOWN,
             disable_web_page_preview=True,
         )
@@ -164,7 +164,7 @@ async def auth_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     except Exception as e:
         logger.exception(f"Error generating authorization URL for user {user_id}: {e}")
         await update.message.reply_text(
-            "❌ Ocurrió un error al iniciar el proceso de autorización. Por favor, intenta nuevamente más tarde con /auth."
+            "❌ An error occurred while starting the authorization process. Please try again later with /auth."
         )
 
 
@@ -178,22 +178,22 @@ async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     if not sheets_operations or not oauth_manager:
         logger.error("SheetsOperations or OAuthManager not found in bot_data for /sheet.")
-        await update.message.reply_text("Error interno: Servicio no disponible.")
+        await update.message.reply_text("Internal error: Service not available.")
         return
 
     if not oauth_manager.is_authenticated(user_id):
-        await update.message.reply_text("⚠️ Debes autenticarte primero usando /auth.")
+        await update.message.reply_text("⚠️ You must authenticate first using /auth.")
         return
 
     if not context.args or len(context.args) != 1:
-        await update.message.reply_text("⚠️ Uso incorrecto. Proporciona el ID de la hoja.\nEjemplo: `/sheet TU_SHEET_ID_AQUI`")
+        await update.message.reply_text("⚠️ Incorrect usage. Provide the sheet ID.\nExample: `/sheet YOUR_SHEET_ID_HERE`")
         return
 
     spreadsheet_id = context.args[0].strip()
     wait_message = None
     db: Session | None = None
     try:
-        wait_message = await update.message.reply_text(f"Verificando y configurando hoja '{spreadsheet_id}'...")
+        wait_message = await update.message.reply_text(f"Verifying and configuring sheet '{spreadsheet_id}'...")
 
         # Verify access and get title
         spreadsheet_title = sheets_operations.setup_for_user(user_id, spreadsheet_id)
@@ -204,43 +204,43 @@ async def sheet_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             success = _set_active_sheet(db, user_id, spreadsheet_id, spreadsheet_title)
             if success:
                 await wait_message.edit_text(
-                    f"✅ Hoja de cálculo *{spreadsheet_title}* seleccionada.\n\nAhora puedes usar comandos como /agregar en esta hoja.",
+                    f"✅ Spreadsheet *{spreadsheet_title}* selected.\n\nNow you can use commands like /add with this sheet.",
                     parse_mode=ParseMode.MARKDOWN,
                 )
                 logger.info(f"User {user_id} selected spreadsheet {spreadsheet_id} ('{spreadsheet_title}') and saved to DB.")
             else:
                 await wait_message.edit_text(
-                    f"❌ Se verificó la hoja '{spreadsheet_title}', pero hubo un error al guardarla como activa. Intenta de nuevo."
+                    f"❌ The sheet '{spreadsheet_title}' was verified, but there was an error saving it as active. Try again."
                 )
 
         else:
             await wait_message.edit_text(
-                f"❌ No se pudo verificar el acceso a la hoja con ID: {spreadsheet_id}. Asegúrate de estar autenticado (/auth) y tener permisos."
+                f"❌ Could not verify access to the sheet with ID: {spreadsheet_id}. Make sure you are authenticated (/auth) and have permissions."
             )
 
     except SpreadsheetNotFound:
         logger.warning(f"SpreadsheetNotFound error for user {user_id}, sheet_id {spreadsheet_id}")
-        error_msg = f"❌ Hoja no encontrada o inaccesible (ID: {spreadsheet_id}). Verifica el ID y tus permisos."
+        error_msg = f"❌ Sheet not found or inaccessible (ID: {spreadsheet_id}). Verify the ID and your permissions."
         if wait_message:
             await wait_message.edit_text(error_msg)
         else:
             await update.message.reply_text(error_msg)
     except (APIError, GoogleAuthError) as e:
         logger.error(f"API/Auth error setting sheet {spreadsheet_id} for user {user_id}: {e}")
-        error_msg = f"❌ Error al acceder a la hoja '{spreadsheet_id}'."
+        error_msg = f"❌ Error accessing sheet '{spreadsheet_id}'."
         if "PERMISSION_DENIED" in str(e):
-            error_msg += " Permiso denegado."
+            error_msg += " Permission denied."
         elif "invalid_grant" in str(e) or isinstance(e, GoogleAuthError):
-            error_msg = "❌ Error de autenticación. Intenta /auth de nuevo."
+            error_msg = "❌ Authentication error. Try /auth again."
         else:
-            error_msg += " Intenta de nuevo más tarde."
+            error_msg += " Try again later."
         if wait_message:
             await wait_message.edit_text(error_msg)
         else:
             await update.message.reply_text(error_msg)
     except Exception as e:
         logger.exception(f"Unexpected error setting spreadsheet {spreadsheet_id} for user {user_id}: {e}")
-        error_msg = f"❌ Error inesperado al configurar la hoja '{spreadsheet_id}'."
+        error_msg = f"❌ Unexpected error configuring sheet '{spreadsheet_id}'."
         if wait_message:
             await wait_message.edit_text(error_msg)
         else:
@@ -313,16 +313,16 @@ async def logout_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             logger.debug("SheetsClient or clear_user_cache method not found, skipping cache clear.")
 
         await update.message.reply_text(
-            "✅ Has cerrado sesión correctamente.\n\n"
-            "El acceso a tu cuenta de Google ha sido revocado para este bot, "
-            "y tus datos locales han sido eliminados.\n\n"
-            "Usa /auth si deseas volver a conectar."
+            "✅ You have successfully logged out.\n\n"
+            "Access to your Google account has been revoked for this bot, "
+            "and your local data has been deleted.\n\n"
+            "Use /auth if you wish to reconnect."
         )
         logger.info(f"Logout completed for user {user_id}")
 
     except Exception as e:
         logger.exception(f"Error during logout for user {user_id}: {e}")
-        await update.message.reply_text("❌ Ocurrió un error al cerrar sesión. Por favor, intenta nuevamente.")
+        await update.message.reply_text("❌ An error occurred during logout. Please try again.")
 
 
 # --- OAuth Callback Handling Logic ---
@@ -340,11 +340,11 @@ async def _send_auth_success_message(context: ContextTypes.DEFAULT_TYPE) -> None
     try:
         await context.bot.send_message(
             chat_id=user_id,
-            text="✅ *Autorización Exitosa*\n\n"
-            "Has conectado tu cuenta de Google Sheets correctamente.\n\n"
-            "Ahora puedes:\n"
-            "• Usar /sheet <ID> para seleccionar una hoja.\n"
-            "• Usar /agregar para registrar transacciones.",
+            text="✅ *Authorization Successful*\n\n"
+            "You have successfully connected your Google Sheets account.\n\n"
+            "Now you can:\n"
+            "• Use /sheet <ID> to select a sheet.\n"
+            "• Use /add to record transactions.",
             parse_mode=ParseMode.MARKDOWN,
         )
     except Exception as e:
