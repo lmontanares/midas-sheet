@@ -1,95 +1,126 @@
-# Financial Management System (v3.4)
+# MidasSheet (v0.1 Beta)
 
-This project implements a personal financial management system consisting of several main components:
+A personal financial management system that helps you track expenses and income using a Telegram bot connected to your own Google Sheets.
 
-1.  A Telegram bot to interact with users.
-2.  Integration with Google Sheets to store and manage financial data.
-3.  OAuth 2.0 authentication for secure access to the user's own spreadsheets.
-4.  **SQLite Database (v3.2)** to store encrypted tokens, selected sheets, and custom categories.
-5.  **User-specific custom category management system (v3.3)**.
-6.  **Full English Interface (v3.4)** - Note: This version is not backward compatible with previous Spanish versions. All users will need to create new spreadsheets with English headers.
+![Version](https://img.shields.io/badge/version-0.1--beta-blue)
+![Python](https://img.shields.io/badge/Python-3.13%2B-green)
+![License](https://img.shields.io/badge/license-GPL--3.0-yellow)
 
-## Requirements
+## Overview
 
--   Python 3.13+
--   Telegram bot token (obtained via [@BotFather](https://t.me/botfather))
--   Google Cloud Platform OAuth 2.0 credentials
--   A Fernet encryption key to securely store tokens
+This project implements a personal financial management system consisting of:
+
+1. A **Telegram bot** for easy access from any device
+2. **Google Sheets integration** to store and manage your financial data
+3. **OAuth 2.0 authentication** for secure access to your own spreadsheets
+4. **SQLite Database** to store encrypted tokens and user preferences
+5. **Custom category management** to personalize expense tracking
+
+**Note**: This is a beta version (0.1) released for testing and feedback.
+
+![System Architecture](https://via.placeholder.com/800x400?text=System+Architecture+Diagram)
 
 ## Key Features
 
--   **OAuth 2.0 Authentication**: Each user securely accesses their own Google Sheets.
--   **Persistent SQLite Storage (v3.2)**: Securely saves user settings (selected sheet) and credentials across restarts.
--   **Encrypted Tokens (v3.2)**: Secure storage of OAuth credentials in the database using Fernet cryptography.
--   **User-Specific Custom Categories (v3.3)**: Each user can define, edit, and use their own income and expense categories.
--   **Guided Flow**: Intuitive interface with buttons for logging transactions and managing categories.
--   **Modular Architecture**: Clean design with separation of concerns (auth, bot, db, sheets, etc.).
--   **Modern Static Typing**: Full use of Python 3.9+ typing features for enhanced robustness and clarity.
+- **OAuth 2.0 Authentication**: Securely access your own Google Sheets without sharing permissions
+- **Encrypted Token Storage**: Secure token management using Fernet cryptography
+- **Custom Categories**: Define your own income and expense categories
+- **Guided Transaction Flow**: Intuitive interface with buttons for logging transactions
+- **Multi-User Support**: Each user accesses their own spreadsheets and uses their own categories
+- **Modern Type Hints**: Full use of Python 3.9+ typing features
 
-## Installation
+## Screenshots
 
-### 1. Clone the repository
+![Telegram Bot Interface](https://via.placeholder.com/300x600?text=Telegram+Bot+Interface)
+![Category Management](https://via.placeholder.com/300x600?text=Category+Management)
+![Transaction Flow](https://via.placeholder.com/300x600?text=Transaction+Flow)
 
-```bash
-git clone <repository>
-cd finanzas
-```
+## Getting Started
 
-### 2. Create and activate virtual environment
+### Prerequisites
 
-Using the `uv` package manager:
+- Python 3.13+
+- Telegram bot token (from [@BotFather](https://t.me/botfather))
+- Google Cloud Platform OAuth 2.0 credentials
+- [`uv` package manager](https://docs.astral.sh/uv/) (recommended)
 
-```bash
-uv venv .venv
-source .venv/bin/activate  # Linux/Mac
-# or
-.venv\Scripts\activate  # Windows
-```
+### Installation
 
-### 3. Install dependencies
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/finanzas.git
+   cd finanzas
+   ```
 
-```bash
-uv pip install -r requirements.txt
-```
+2. Create and activate a virtual environment:
+   ```bash
+   uv venv .venv
+   source .venv/bin/activate  # Linux/Mac
+   # or
+   .venv\Scripts\activate  # Windows
+   ```
 
-For development:
+3. Install dependencies:
+   ```bash
+   uv pip install -r requirements.txt
+   ```
 
-```bash
-uv pip install -e ".[dev]"
-```
+4. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration values
+   ```
 
-### 4. Configure environment variables
+5. Generate a Fernet encryption key:
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   # Copy the output to OAUTH_ENCRYPTION_KEY in your .env file
+   ```
 
-Copy the example file and fill in the actual values:
+6. Set up Google Cloud OAuth:
+   - Create a project in [Google Cloud Platform](https://console.cloud.google.com/)
+   - Enable Google Sheets and Google Drive APIs
+   - Create OAuth 2.0 credentials for a web application
+   - Add Redirect URI: `http://localhost:8000/oauth2callback` (or your configured host/port)
+   - Download credentials and save as `oauth_credentials.json` in the project root
 
-```bash
-cp .env.example .env
-```
+7. Run the application:
+   ```bash
+   python main.py
+   ```
 
-Edit the `.env` file with the following values:
--   Telegram bot token (`TELEGRAM_TOKEN`).
--   Path to the OAuth 2.0 credentials file downloaded from Google Cloud Console (`OAUTH_CREDENTIALS_PATH`). By default, `oauth_credentials.json` is expected in the project root.
--   Host and port where the local OAuth server will run (`OAUTH_SERVER_HOST`, `OAUTH_SERVER_PORT`). Defaults to `localhost` and `8000`.
--   Redirect URI configured in Google Cloud Console (`OAUTH_REDIRECT_URI`). Must match the local server configuration (e.g., `http://localhost:8000/oauth2callback`).
--   Fernet encryption key to secure stored OAuth tokens (`OAUTH_ENCRYPTION_KEY`). See the next section to generate it.
--   Database connection URL (`DATABASE_URL`). Defaults to SQLite (`sqlite:///./finanzas.db`).
--   Desired logging level (`LOG_LEVEL`). Defaults to `INFO`.
+8. Start interacting with your bot on Telegram!
 
-### 5. Generate Fernet encryption key
+## Bot Commands
 
-```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
+- `/start` - Begin interaction with the bot
+- `/help` - Display available commands and usage info
+- `/auth` - Start the OAuth authentication process
+- `/sheet` - Select a specific spreadsheet
+- `/logout` - Revoke access and log out
+- `/add` - Add a new expense or income
+- `/categories` - View your current expense/income categories
+- `/editcat` - Edit your categories (using YAML import/export)
+- `/resetcat` - Reset categories to default values
 
-Copy the generated key into the `OAUTH_ENCRYPTION_KEY` variable in the `.env` file.
+## Transaction Flow
 
-### 6. Configure OAuth in Google Cloud Platform
+The transaction flow (`/add` command) follows these steps:
 
-1.  Create a project in [Google Cloud Platform](https://console.cloud.google.com/)
-2.  Enable the Google Sheets and Google Drive APIs
-3.  Create OAuth 2.0 credentials for a web application
-4.  Add Redirect URI: `http://localhost:8000/oauth2callback` (or your configured host/port)
-5.  Download the JSON credentials and save them as `oauth_credentials.json`
+1. Select transaction type (income or expense)
+2. Select category from your custom list
+3. Select subcategory for expenses
+4. Enter the amount
+5. Optionally add comments
+6. Transaction is recorded in your selected Google Sheet
+
+## Category Management
+
+Users can customize categories through:
+
+- **View**: Use `/categories` to see current categories
+- **Edit**: Use `/editcat` to import/export categories as YAML files
+- **Reset**: Use `/resetcat` to revert to default categories
 
 ## Project Structure
 
@@ -106,102 +137,40 @@ Copy the generated key into the `OAUTH_ENCRYPTION_KEY` variable in the `.env` fi
 │   └── utils/            # Common utilities
 │
 ├── tests/                # Automated tests
-│
 ├── docs/                 # Documentation
-│   └── handover.md       # Detailed handover document
-│
 ├── main.py               # Main entry point
-├── pyproject.toml        # Project configuration and dependencies
-├── pytest.ini            # Pytest configuration
-├── .env.example          # Example environment variables
-├── .gitignore            # Files ignored by Git
+├── pyproject.toml        # Project configuration
 └── README.md             # This documentation
-
-# Note: Files like .env, finanzas.db, oauth_credentials.json are local
-# and should not be included in version control.
 ```
 
-## Available Commands
-
-The bot implements the following commands:
-
--   `/start`: Starts interaction with the bot
--   `/help`: Shows help about available commands
--   `/auth`: Starts the OAuth authentication process
--   `/sheet`: Selects a specific spreadsheet
--   `/logout`: Logs out and revokes access
--   `/add`: Adds a new expense or income with custom categories
--   `/categories`: Shows the user's current categories
--   `/editcat`: Provides options to edit categories (YAML)
--   `/resetcat`: Resets the user's categories to default values
-
-## Transaction Logging
-
-The transaction logging flow (`/add`) follows these steps:
-
-1.  Select transaction type (income or expense)
-2.  Select category (**from the user's custom list**)
-3.  Select subcategory for expenses (**from the custom list**)
-4.  Enter the amount
-5.  Option to add comments (Yes/No)
-6.  Log to the corresponding spreadsheet tab ("expenses" or "income")
-
-## Custom Category Management
-
-Users can customize their categories using:
-
--   **View categories**: `/categories` command shows current categories
--   **Edit categories**: `/editcat` command allows importing/exporting YAML files
--   **Reset categories**: `/resetcat` command reverts to default categories
-
-## Usage
-
-To start the application:
-
-```bash
-python main.py
-```
-
-## Tests
-
-### Running Tests
-
-To run all tests:
+## Running Tests
 
 ```bash
 pytest
-```
-
-To check coverage:
-
-```bash
+# or for coverage report
 pytest --cov=src tests/
-```
-
-You can also use the scripts defined in `pyproject.toml` (if they exist) with `uv`:
-
-```bash
-# Assuming they are defined in [tool.uv.scripts]
-uv run test
-uv run lint
 ```
 
 ## Development
 
 ### Code Conventions
 
--   Follow PEP 8
--   Use modern Python 3.9+ typing features
--   Document all public functions and methods
--   Write tests for new functionality
--   For architectural details and design decisions, consult `docs/handover.md`.
-
-### Development Tools
-
--   ruff: Linter and formatter
--   pytest: Testing framework
--   vulture: Dead code detection
+- Follow PEP 8
+- Use modern Python 3.9+ typing features
+- Document all public functions and methods
+- Write tests for new functionality
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the GNU General Public License v3.0 - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) library
+- [gspread](https://github.com/burnash/gspread) for Google Sheets integration
+- [SQLAlchemy](https://www.sqlalchemy.org/) for database ORM
+- [cryptography](https://github.com/pyca/cryptography) for secure token storage
+
+## Development Note
+
+This project was developed with assistance from Large Language Models (LLMs), primarily [Claude](https://www.anthropic.com/claude) and [Gemini](https://gemini.google.com). LLMs were used for code generation, documentation writing, debugging assistance, and architectural guidance. All LLM-generated content has been reviewed and validated by human developers before inclusion in this project.
