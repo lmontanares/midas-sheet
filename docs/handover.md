@@ -306,10 +306,11 @@ Required environment variables:
 
 ## Running the Application
 
-1. Create virtual environment with Python 3.13+
-2. Install dependencies with uv or pip
-3. Configure environment variables
-4. Run with `python main.py`
+1. Clone the repository
+2. Configure environment variables
+3. Run with `uv run python main.py`
+
+> Note: `uv run` automatically handles virtual environment creation, dependency installation, and activation.
 
 ## License Information
 

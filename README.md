@@ -42,54 +42,43 @@ This project implements a personal financial management system consisting of:
 - Python 3.13+
 - Telegram bot token (from [@BotFather](https://t.me/botfather))
 - Google Cloud Platform OAuth 2.0 credentials
-- [`uv` package manager](https://docs.astral.sh/uv/) (recommended)
+- [`uv` package manager](https://docs.astral.sh/uv/) (required)
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/finanzas.git
-   cd finanzas
+   git clone https://github.com/yourusername/midas-sheet.git
+   cd midas-sheet
    ```
 
-2. Create and activate a virtual environment:
-   ```bash
-   uv venv .venv
-   source .venv/bin/activate  # Linux/Mac
-   # or
-   .venv\Scripts\activate  # Windows
-   ```
-
-3. Install dependencies:
-   ```bash
-   uv pip install -r requirements.txt
-   ```
-
-4. Configure environment variables:
+2. Configure environment variables:
    ```bash
    cp .env.example .env
    # Edit .env with your configuration values
    ```
 
-5. Generate a Fernet encryption key:
+3. Generate a Fernet encryption key:
    ```bash
    python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
    # Copy the output to OAUTH_ENCRYPTION_KEY in your .env file
    ```
 
-6. Set up Google Cloud OAuth:
+4. Set up Google Cloud OAuth:
    - Create a project in [Google Cloud Platform](https://console.cloud.google.com/)
    - Enable Google Sheets and Google Drive APIs
    - Create OAuth 2.0 credentials for a web application
    - Add Redirect URI: `http://localhost:8000/oauth2callback` (or your configured host/port)
    - Download credentials and save as `oauth_credentials.json` in the project root
 
-7. Run the application:
+5. Run the application:
    ```bash
-   python main.py
+   uv run python main.py
    ```
+   
+   > Note: `uv run` automatically handles virtual environment creation, dependency installation, and activation.
 
-8. Start interacting with your bot on Telegram!
+6. Start interacting with your bot on Telegram!
 
 ## Bot Commands
 
@@ -125,7 +114,7 @@ Users can customize categories through:
 ## Project Structure
 
 ```
-/finanzas/
+/midas-sheet/
 │
 ├── src/                  # Source code
 │   ├── auth/             # OAuth 2.0 Authentication
@@ -146,9 +135,9 @@ Users can customize categories through:
 ## Running Tests
 
 ```bash
-pytest
+uv run pytest
 # or for coverage report
-pytest --cov=src tests/
+uv run pytest --cov=src tests/
 ```
 
 ## Development

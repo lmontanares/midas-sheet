@@ -228,15 +228,12 @@ The project implements several design patterns:
 ## 8. Development Setup
 
 1. Clone the repository
-2. Create a virtual environment: `uv venv .venv`
-3. Activate the environment: `source .venv/bin/activate`
-4. Install dependencies: `uv pip install -r requirements.txt`
-5. For development, install extras: `uv pip install -e ".[dev]"`
-6. Configure environment variables (copy `.env.example` to `.env`)
-7. Generate a Fernet key: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
-8. Set up OAuth in Google Cloud Platform
-9. Run tests: `pytest` or `pytest --cov=src`
-10. Start the application: `python main.py`
+2. Configure environment variables (copy `.env.example` to `.env`)
+3. Generate a Fernet key: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
+4. Set up OAuth in Google Cloud Platform
+5. Run the application: `uv run python main.py`
+
+> Note: `uv run` automatically handles virtual environment creation, dependency installation, and activation.
 
 ## 9. Future Improvements
 
