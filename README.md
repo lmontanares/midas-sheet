@@ -48,7 +48,7 @@ This project implements a personal financial management system consisting of:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/midas-sheet.git
+   git clone https://github.com/lmontanares/midas-sheet.git
    cd midas-sheet
    ```
 
@@ -75,7 +75,7 @@ This project implements a personal financial management system consisting of:
    ```bash
    uv run python main.py
    ```
-   
+
    > Note: `uv run` automatically handles virtual environment creation, dependency installation, and activation.
 
 6. Start interacting with your bot on Telegram!
